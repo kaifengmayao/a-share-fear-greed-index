@@ -1,0 +1,191 @@
+{
+  "run_date": "2026-07-07",
+  "score": 13.3,
+  "label": "恐惧",
+  "formal": false,
+  "suggested_position": "20%-40%",
+  "outlook": {
+    "up": 24.3,
+    "flat": 32.8,
+    "down": 42.9
+  },
+  "components": [
+    {
+      "key": "trend",
+      "name": "沪深300趋势",
+      "score": 50.0,
+      "weight": 0.2,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "沪深300历史行情不足，趋势模块缺失。",
+      "details": {}
+    },
+    {
+      "key": "liquidity",
+      "name": "成交与流动性",
+      "score": 50.0,
+      "weight": 0.15,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "历史成交额不足，流动性模块缺失。",
+      "details": {}
+    },
+    {
+      "key": "breadth",
+      "name": "市场宽度",
+      "score": 17.7,
+      "weight": 0.18,
+      "status": "WARN",
+      "confidence": 0.7,
+      "message": "市场宽度目前只有东方财富一个来源，可信度降低。",
+      "details": {
+        "total": 80,
+        "up": 10,
+        "down": 69,
+        "limit_up": 1,
+        "limit_down": 2,
+        "up_ratio": 0.125
+      }
+    },
+    {
+      "key": "sector",
+      "name": "板块强弱",
+      "score": 16.2,
+      "weight": 0.15,
+      "status": "WARN",
+      "confidence": 0.7,
+      "message": "板块强弱目前只有东方财富一个来源，情绪地图需结合人工复核。",
+      "details": {
+        "top_mean": -0.623,
+        "bottom_mean": -4.211,
+        "sector_up_ratio": 0.02
+      }
+    },
+    {
+      "key": "institution",
+      "name": "机构态度",
+      "score": 7.7,
+      "weight": 0.2,
+      "status": "WARN",
+      "confidence": 0.75,
+      "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+      "details": {
+        "etf_avg_pct": -1.243,
+        "if_basis_pct": -1.854
+      }
+    },
+    {
+      "key": "risk",
+      "name": "风险波动",
+      "score": 50.0,
+      "weight": 0.12,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "波动率数据不足。",
+      "details": {}
+    }
+  ],
+  "warnings": [
+    "沪深300历史行情不足，趋势模块缺失。",
+    "历史成交额不足，流动性模块缺失。",
+    "市场宽度目前只有东方财富一个来源，可信度降低。",
+    "板块强弱目前只有东方财富一个来源，情绪地图需结合人工复核。",
+    "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+    "波动率数据不足。"
+  ],
+  "institution_view": [
+    "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
+    "股指期货：IF主连相对沪深300贴水，期货端偏谨慎。",
+    "融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。"
+  ],
+  "risk_tips": [
+    "今日可用数据权重不足70%，指数为试算值，不建议作为正式仓位信号。"
+  ],
+  "emotion_map": {
+    "strong": [
+      {
+        "name": "游戏Ⅱ",
+        "pct_change": 0.84,
+        "amount": 21648327224.0
+      },
+      {
+        "name": "半导体",
+        "pct_change": 0.57,
+        "amount": 461117906749.0
+      },
+      {
+        "name": "银行Ⅱ",
+        "pct_change": -0.4,
+        "amount": 24783599946.0
+      },
+      {
+        "name": "影视院线",
+        "pct_change": -0.85,
+        "amount": 5829563763.0
+      },
+      {
+        "name": "电子化学品Ⅱ",
+        "pct_change": -0.99,
+        "amount": 53017269530.0
+      },
+      {
+        "name": "工程机械",
+        "pct_change": -1.32,
+        "amount": 12604737192.0
+      },
+      {
+        "name": "电子",
+        "pct_change": -1.39,
+        "amount": 830720266607.0
+      },
+      {
+        "name": "电池",
+        "pct_change": -1.44,
+        "amount": 83319647485.0
+      }
+    ],
+    "weak": [
+      {
+        "name": "贵金属",
+        "pct_change": -5.44,
+        "amount": 16159227233.0
+      },
+      {
+        "name": "生物制品",
+        "pct_change": -4.35,
+        "amount": 16929111885.0
+      },
+      {
+        "name": "通信服务",
+        "pct_change": -4.18,
+        "amount": 11557555256.0
+      },
+      {
+        "name": "医疗服务",
+        "pct_change": -4.12,
+        "amount": 28661887525.0
+      },
+      {
+        "name": "化学制药",
+        "pct_change": -4.07,
+        "amount": 57359717136.0
+      },
+      {
+        "name": "风电设备",
+        "pct_change": -4.03,
+        "amount": 11010896907.0
+      },
+      {
+        "name": "医药生物",
+        "pct_change": -3.78,
+        "amount": 134706216655.0
+      },
+      {
+        "name": "房地产服务",
+        "pct_change": -3.72,
+        "amount": 816087453.0
+      }
+    ],
+    "concentration": 0.123
+  }
+}
