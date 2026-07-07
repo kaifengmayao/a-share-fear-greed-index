@@ -319,13 +319,24 @@ class DataProviders:
         )
 
     def _eastmoney_clist(self, fs: str, fields: str, page_size: int) -> list[dict]:
-        url = (
-            "https://push2.eastmoney.com/api/qt/clist/get"
-            f"?pn=1&pz={page_size}&po=1&np=1&fltt=2&invt=2"
-            f"&fs={fs}&fields={fields}"
-        )
-        data = self.http.get_json(url).get("data") or {}
-        return data.get("diff") or []
+        rows: list[dict] = []
+        page = 1
+        per_page = min(max(page_size, 1), 100)
+        total = page_size
+        while len(rows) < min(page_size, total):
+            url = (
+                "https://push2.eastmoney.com/api/qt/clist/get"
+                f"?pn={page}&pz={per_page}&po=1&np=1&fltt=2&invt=2"
+                f"&fs={fs}&fields={fields}"
+            )
+            data = self.http.get_json(url).get("data") or {}
+            total = int(data.get("total") or total)
+            diff = data.get("diff") or []
+            if not diff:
+                break
+            rows.extend(diff)
+            page += 1
+        return rows[:page_size]
 
 
 def collect_attempts(
