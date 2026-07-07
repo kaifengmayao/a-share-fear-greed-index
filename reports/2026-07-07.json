@@ -1,13 +1,13 @@
 {
   "run_date": "2026-07-07",
-  "score": 27.5,
+  "score": 13.6,
   "label": "恐惧",
   "formal": true,
   "suggested_position": "20%-40%",
   "outlook": {
-    "up": 25.0,
-    "flat": 32.8,
-    "down": 42.2
+    "up": 23.3,
+    "flat": 32.9,
+    "down": 43.8
   },
   "components": [
     {
@@ -28,15 +28,15 @@
     {
       "key": "liquidity",
       "name": "成交与流动性",
-      "score": 49.7,
+      "score": 52.6,
       "weight": 0.15,
       "status": "WARN",
       "confidence": 0.8,
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
       "details": {
-        "recent_amount": 1482874790003.55,
-        "base_amount": 1490842239453.14,
-        "ratio": 0.995
+        "recent_amount": 948529555418.68,
+        "base_amount": 904633960855.21,
+        "ratio": 1.049
       }
     },
     {
@@ -46,14 +46,15 @@
       "weight": 0.18,
       "status": "WARN",
       "confidence": 0.7,
-      "message": "市场宽度目前只有东方财富一个来源，可信度降低。",
+      "message": "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。",
       "details": {
         "total": 80,
         "up": 10,
         "down": 69,
         "limit_up": 1,
         "limit_down": 2,
-        "up_ratio": 0.125
+        "up_ratio": 0.125,
+        "down_ratio": 0.863
       }
     },
     {
@@ -99,10 +100,11 @@
   ],
   "warnings": [
     "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
-    "市场宽度目前只有东方财富一个来源，可信度降低。",
+    "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。",
     "板块强弱目前只有东方财富一个来源，情绪地图需结合人工复核。",
     "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
-    "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+    "极端普跌压力校准：下跌股票占比 86.2%（69/80），市场宽度进入极端恐惧区，最终指数从 27.9 下调至 13.6。"
   ],
   "institution_view": [
     "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
@@ -199,6 +201,7 @@
     ],
     "concentration": 0.123
   },
+  "raw_score": 27.9,
   "factor_contributions": [
     {
       "key": "trend",
@@ -215,12 +218,12 @@
     {
       "key": "liquidity",
       "name": "成交与流动性",
-      "score": 49.7,
+      "score": 52.6,
       "raw_weight": 0.15,
       "confidence": 0.8,
       "effective_weight": 0.1506,
-      "contribution": 7.48,
-      "impact_vs_neutral": -0.05,
+      "contribution": 7.92,
+      "impact_vs_neutral": 0.39,
       "status": "WARN",
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
     },
@@ -234,7 +237,7 @@
       "contribution": 2.8,
       "impact_vs_neutral": -5.11,
       "status": "WARN",
-      "message": "市场宽度目前只有东方财富一个来源，可信度降低。"
+      "message": "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。"
     },
     {
       "key": "sector",
@@ -271,6 +274,16 @@
       "impact_vs_neutral": -2.08,
       "status": "WARN",
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    }
+  ],
+  "score_adjustments": [
+    {
+      "name": "极端普跌压力校准",
+      "before": 27.9,
+      "after": 13.6,
+      "impact": -14.3,
+      "condition": "下跌股票占比 86.2%（69/80）",
+      "message": "极端普跌压力校准：下跌股票占比 86.2%（69/80），市场宽度进入极端恐惧区，最终指数从 27.9 下调至 13.6。"
     }
   ],
   "index_allocation": [
@@ -401,5 +414,5 @@
       "warning": null
     }
   ],
-  "report_schema_version": 3
+  "report_schema_version": 4
 }
