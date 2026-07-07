@@ -5,7 +5,13 @@ from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
-from .models import AfgiResult, ComponentScore, QualityStatus
+from .models import (
+    AfgiResult,
+    ComponentScore,
+    FactorContribution,
+    IndexAllocationScore,
+    QualityStatus,
+)
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -28,9 +34,39 @@ def render_markdown(result: AfgiResult) -> str:
         f"- 震荡概率：{result.outlook['flat']:.1f}%",
         f"- 下跌概率：{result.outlook['down']:.1f}%",
         "",
-        "## 数据质量提示",
+        "## 未来20天指数配置雷达",
         "",
     ]
+    if result.index_allocation:
+        lines.append("| 排名 | 指数 | 配置信号 | 评分 | 20天预期 | 上涨概率 | 核心原因 |")
+        lines.append("|---:|---|---|---:|---:|---:|---|")
+        for item in result.index_allocation[:7]:
+            lines.append(
+                f"| {item.rank} | {item.name}({item.code}) | {item.signal} | "
+                f"{item.score:.1f} | {item.expected_20d_return:.2f}% | "
+                f"{item.up_probability:.1f}% | {item.reason} |"
+            )
+    else:
+        lines.append("- 指数横向配置模型暂未获得足够历史数据。")
+
+    lines.extend(["", "## 因子贡献拆解", ""])
+    if result.factor_contributions:
+        lines.append("| 因子 | 因子分 | 有效权重 | 对总分贡献 | 相对中性影响 | 状态 |")
+        lines.append("|---|---:|---:|---:|---:|---|")
+        for item in result.factor_contributions:
+            lines.append(
+                f"| {item.name} | {item.score:.1f} | {item.effective_weight:.1%} | "
+                f"{item.contribution:.2f} | {item.impact_vs_neutral:+.2f} | "
+                f"{item.status.value} |"
+            )
+    else:
+        lines.append("- 暂无因子贡献拆解。")
+
+    lines.extend([
+        "",
+        "## 数据质量提示",
+        "",
+    ])
     if result.warnings:
         lines.extend([f"- {warning}" for warning in result.warnings])
     else:
@@ -80,8 +116,24 @@ def render_wechat_markdown(result: AfgiResult) -> str:
         f"明日展望：上涨 {result.outlook['up']:.1f}% / "
         f"震荡 {result.outlook['flat']:.1f}% / 下跌 {result.outlook['down']:.1f}%",
         "",
-        "### 数据质量提示",
     ]
+    if result.index_allocation:
+        lines.extend(["### 未来20天指数配置"])
+        for item in result.index_allocation[:3]:
+            lines.append(
+                f"- {item.rank}. {item.name}：{item.signal}，评分 {item.score:.1f}，"
+                f"上涨概率 {item.up_probability:.1f}%"
+            )
+
+    if result.factor_contributions:
+        lines.extend(["", "### 因子贡献拆解"])
+        for item in result.factor_contributions[:4]:
+            lines.append(
+                f"- {item.name}：贡献 {item.contribution:.2f} 分，"
+                f"相对中性 {item.impact_vs_neutral:+.2f}"
+            )
+
+    lines.extend(["", "### 数据质量提示"])
     lines.extend([f"- {item}" for item in warnings])
     lines.extend(["", "### 机构态度"])
     lines.extend([f"- {item}" for item in result.institution_view[:3]])
@@ -111,6 +163,16 @@ def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:
     return markdown_path, json_path
 
 
+def report_needs_refresh(json_path: Path) -> bool:
+    if not json_path.exists():
+        return True
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    return not data.get("factor_contributions") or not data.get("index_allocation")
+
+
 def load_report(json_path: Path) -> AfgiResult:
     data = json.loads(json_path.read_text(encoding="utf-8"))
     components = [
@@ -126,6 +188,46 @@ def load_report(json_path: Path) -> AfgiResult:
         )
         for item in data.get("components", [])
     ]
+    factor_contributions = [
+        FactorContribution(
+            key=item["key"],
+            name=item["name"],
+            score=float(item["score"]),
+            raw_weight=float(item["raw_weight"]),
+            confidence=float(item["confidence"]),
+            effective_weight=float(item["effective_weight"]),
+            contribution=float(item["contribution"]),
+            impact_vs_neutral=float(item["impact_vs_neutral"]),
+            status=QualityStatus(item["status"]),
+            message=item["message"],
+        )
+        for item in data.get("factor_contributions", [])
+    ]
+    index_allocation = [
+        IndexAllocationScore(
+            rank=int(item["rank"]),
+            name=item["name"],
+            code=item["code"],
+            secid=item["secid"],
+            score=float(item["score"]),
+            signal=item["signal"],
+            expected_20d_return=float(item["expected_20d_return"]),
+            up_probability=float(item["up_probability"]),
+            momentum_20d=float(item["momentum_20d"]),
+            momentum_60d=float(item["momentum_60d"]),
+            trend_score=float(item["trend_score"]),
+            volume_ratio_5_20=(
+                None
+                if item.get("volume_ratio_5_20") is None
+                else float(item["volume_ratio_5_20"])
+            ),
+            volatility_20d=float(item["volatility_20d"]),
+            max_drawdown_60d=float(item["max_drawdown_60d"]),
+            reason=item["reason"],
+            warning=item.get("warning"),
+        )
+        for item in data.get("index_allocation", [])
+    ]
     return AfgiResult(
         run_date=date.fromisoformat(data["run_date"]),
         score=data.get("score"),
@@ -138,4 +240,6 @@ def load_report(json_path: Path) -> AfgiResult:
         institution_view=data.get("institution_view", []),
         risk_tips=data.get("risk_tips", []),
         emotion_map=data.get("emotion_map", {}),
+        factor_contributions=factor_contributions,
+        index_allocation=index_allocation,
     )
