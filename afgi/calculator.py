@@ -6,6 +6,8 @@ import statistics
 from .models import (
     AfgiResult,
     ComponentScore,
+    FactorContribution,
+    IndexAllocationScore,
     KLine,
     MarketBreadth,
     QualityStatus,
@@ -13,7 +15,7 @@ from .models import (
     SectorSnapshot,
     SourceValue,
 )
-from .providers import DataProviders, collect_attempts
+from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
 from .quality import consensus
 from .utils import clamp, mean, pct_to_score, today_cn
 
@@ -105,6 +107,8 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     outlook = build_outlook(score, components)
     institution_view = build_institution_view(etfs, future_quote, price_quality)
     risk_tips = build_risk_tips(score, components, emotion_map, formal)
+    factor_contributions = build_factor_contributions(components)
+    index_allocation = build_index_allocation(providers)
 
     return AfgiResult(
         run_date=run_date,
@@ -118,6 +122,8 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
         institution_view=institution_view,
         risk_tips=risk_tips,
         emotion_map=emotion_map,
+        factor_contributions=factor_contributions,
+        index_allocation=index_allocation,
     )
 
 
@@ -167,6 +173,161 @@ def build_outlook(score: float | None, components: list[ComponentScore]) -> dict
         "flat": round(flat / total * 100, 1),
         "down": round(down / total * 100, 1),
     }
+
+
+def build_factor_contributions(components: list[ComponentScore]) -> list[FactorContribution]:
+    available = [
+        c for c in components if c.status not in (QualityStatus.MISSING, QualityStatus.CONFLICT)
+    ]
+    denominator = sum(c.weight * c.confidence for c in available)
+    result: list[FactorContribution] = []
+    for component in components:
+        usable = component.status not in (QualityStatus.MISSING, QualityStatus.CONFLICT)
+        raw_effective = component.weight * component.confidence if usable else 0.0
+        effective_weight = raw_effective / denominator if denominator else 0.0
+        contribution = component.score * effective_weight
+        impact = (component.score - 50.0) * effective_weight
+        result.append(
+            FactorContribution(
+                key=component.key,
+                name=component.name,
+                score=round(component.score, 1),
+                raw_weight=round(component.weight, 4),
+                confidence=round(component.confidence, 4),
+                effective_weight=round(effective_weight, 4),
+                contribution=round(contribution, 2),
+                impact_vs_neutral=round(impact, 2),
+                status=component.status,
+                message=component.message,
+            )
+        )
+    return result
+
+
+def build_index_allocation(providers: DataProviders) -> list[IndexAllocationScore]:
+    scores: list[IndexAllocationScore] = []
+    for name, code, secid in INDEX_ALLOCATION_UNIVERSE:
+        klines = _safe_call(lambda secid=secid: providers.index_klines(secid, limit=120), [])
+        scores.append(_index_allocation_score(name, code, secid, klines))
+
+    ranked = sorted(scores, key=lambda item: item.score, reverse=True)
+    return [
+        IndexAllocationScore(
+            rank=index,
+            name=item.name,
+            code=item.code,
+            secid=item.secid,
+            score=item.score,
+            signal=item.signal,
+            expected_20d_return=item.expected_20d_return,
+            up_probability=item.up_probability,
+            momentum_20d=item.momentum_20d,
+            momentum_60d=item.momentum_60d,
+            trend_score=item.trend_score,
+            volume_ratio_5_20=item.volume_ratio_5_20,
+            volatility_20d=item.volatility_20d,
+            max_drawdown_60d=item.max_drawdown_60d,
+            reason=item.reason,
+            warning=item.warning,
+        )
+        for index, item in enumerate(ranked, start=1)
+    ]
+
+
+def _index_allocation_score(
+    name: str, code: str, secid: str, klines: list[KLine]
+) -> IndexAllocationScore:
+    if len(klines) < 60:
+        return IndexAllocationScore(
+            rank=0,
+            name=name,
+            code=code,
+            secid=secid,
+            score=0.0,
+            signal="数据不足",
+            expected_20d_return=0.0,
+            up_probability=0.0,
+            momentum_20d=0.0,
+            momentum_60d=0.0,
+            trend_score=0.0,
+            volume_ratio_5_20=None,
+            volatility_20d=0.0,
+            max_drawdown_60d=0.0,
+            reason="历史K线不足，暂不参与配置排序。",
+            warning="历史K线不足60个交易日。",
+        )
+
+    closes = [item.close for item in klines]
+    amounts = [item.amount for item in klines]
+    close = closes[-1]
+    ma20 = statistics.fmean(closes[-20:])
+    ma60 = statistics.fmean(closes[-60:])
+    momentum_20d = (close / closes[-20] - 1) * 100
+    momentum_60d = (close / closes[-60] - 1) * 100
+    trend_gap = (ma20 / ma60 - 1) * 100 if ma60 else 0.0
+    trend_score = clamp(50 + trend_gap * 8 + momentum_20d * 2.2)
+    returns = [(closes[i] / closes[i - 1] - 1) * 100 for i in range(1, len(closes))]
+    volatility_20d = statistics.pstdev(returns[-20:]) if len(returns) >= 20 else 0.0
+    amount_5 = statistics.fmean(amounts[-5:]) if len(amounts) >= 5 else 0.0
+    amount_20 = statistics.fmean(amounts[-20:]) if len(amounts) >= 20 else 0.0
+    volume_ratio = amount_5 / amount_20 if amount_20 else None
+    high_60 = max(closes[-60:])
+    max_drawdown_60d = (close / high_60 - 1) * 100 if high_60 else 0.0
+
+    volume_boost = math.log(max(volume_ratio or 1.0, 0.2)) * 10
+    raw_score = (
+        50
+        + momentum_20d * 1.8
+        + momentum_60d * 0.7
+        + trend_gap * 4.0
+        + volume_boost
+        - volatility_20d * 3.8
+        + max_drawdown_60d * 0.65
+    )
+    score = round(clamp(raw_score), 1)
+    expected_20d_return = clamp(
+        momentum_20d * 0.35
+        + trend_gap * 0.55
+        + ((volume_ratio or 1.0) - 1.0) * 2.0
+        - volatility_20d * 0.18,
+        -8.0,
+        8.0,
+    )
+    up_probability = clamp(50 + expected_20d_return * 4.0 + (score - 50) * 0.25, 20, 80)
+    signal = _allocation_signal(score)
+    reason = (
+        f"20日动量 {momentum_20d:.2f}%，60日动量 {momentum_60d:.2f}%，"
+        f"5/20日成交额比 {volume_ratio:.2f}，20日波动 {volatility_20d:.2f}%。"
+        if volume_ratio is not None
+        else f"20日动量 {momentum_20d:.2f}%，60日动量 {momentum_60d:.2f}%，成交额缺失。"
+    )
+    return IndexAllocationScore(
+        rank=0,
+        name=name,
+        code=code,
+        secid=secid,
+        score=score,
+        signal=signal,
+        expected_20d_return=round(expected_20d_return, 2),
+        up_probability=round(up_probability, 1),
+        momentum_20d=round(momentum_20d, 2),
+        momentum_60d=round(momentum_60d, 2),
+        trend_score=round(trend_score, 1),
+        volume_ratio_5_20=round(volume_ratio, 3) if volume_ratio is not None else None,
+        volatility_20d=round(volatility_20d, 3),
+        max_drawdown_60d=round(max_drawdown_60d, 2),
+        reason=reason,
+    )
+
+
+def _allocation_signal(score: float) -> str:
+    if score >= 68:
+        return "优先配置"
+    if score >= 56:
+        return "适度配置"
+    if score >= 45:
+        return "观察等待"
+    return "低配回避"
 
 
 def build_institution_view(
