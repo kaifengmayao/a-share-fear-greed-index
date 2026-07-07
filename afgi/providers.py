@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from .http import HttpClient
+from .http_client import HttpClient
 from .models import KLine, MarketBreadth, Quote, SectorSnapshot
 from .utils import safe_float
 
