@@ -10,6 +10,16 @@ from .utils import safe_float
 
 CSI300_SECID = "1.000300"
 
+INDEX_ALLOCATION_UNIVERSE = [
+    ("上证50", "000016", "1.000016"),
+    ("沪深300", "000300", "1.000300"),
+    ("中证500", "000905", "1.000905"),
+    ("中证1000", "000852", "1.000852"),
+    ("创业板指", "399006", "0.399006"),
+    ("科创50", "000688", "1.000688"),
+    ("深证成指", "399001", "0.399001"),
+]
+
 
 class DataProviders:
     def __init__(self, http: HttpClient) -> None:
@@ -73,10 +83,10 @@ class DataProviders:
             trade_date=None,
         )
 
-    def csi300_klines(self, limit: int = 120) -> list[KLine]:
+    def index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
         url = (
             "https://push2his.eastmoney.com/api/qt/stock/kline/get"
-            f"?secid={CSI300_SECID}&fields1=f1,f2,f3,f4,f5,f6"
+            f"?secid={secid}&fields1=f1,f2,f3,f4,f5,f6"
             "&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
             "&klt=101&fqt=1&beg=0&end=20500101"
             f"&lmt={limit}"
@@ -100,6 +110,9 @@ class DataProviders:
                 )
             )
         return klines
+
+    def csi300_klines(self, limit: int = 120) -> list[KLine]:
+        return self.index_klines(CSI300_SECID, limit=limit)
 
     def eastmoney_breadth(self) -> MarketBreadth:
         rows = self._eastmoney_clist(
