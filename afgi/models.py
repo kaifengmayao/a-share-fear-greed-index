@@ -88,6 +88,40 @@ class ComponentScore:
 
 
 @dataclass(frozen=True)
+class FactorContribution:
+    key: str
+    name: str
+    score: float
+    raw_weight: float
+    confidence: float
+    effective_weight: float
+    contribution: float
+    impact_vs_neutral: float
+    status: QualityStatus
+    message: str
+
+
+@dataclass(frozen=True)
+class IndexAllocationScore:
+    rank: int
+    name: str
+    code: str
+    secid: str
+    score: float
+    signal: str
+    expected_20d_return: float
+    up_probability: float
+    momentum_20d: float
+    momentum_60d: float
+    trend_score: float
+    volume_ratio_5_20: float | None
+    volatility_20d: float
+    max_drawdown_60d: float
+    reason: str
+    warning: str | None = None
+
+
+@dataclass(frozen=True)
 class AfgiResult:
     run_date: date
     score: float | None
@@ -100,3 +134,5 @@ class AfgiResult:
     institution_view: list[str]
     risk_tips: list[str]
     emotion_map: dict[str, Any]
+    factor_contributions: list[FactorContribution] = field(default_factory=list)
+    index_allocation: list[IndexAllocationScore] = field(default_factory=list)
