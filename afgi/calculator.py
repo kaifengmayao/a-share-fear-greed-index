@@ -12,6 +12,7 @@ from .models import (
     MarketBreadth,
     QualityStatus,
     Quote,
+    ScoreAdjustment,
     SectorSnapshot,
     SourceValue,
 )
@@ -98,9 +99,15 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     available_weight = sum(c.weight * c.confidence for c in available)
     formal = available_weight >= 0.70
     score = None
+    raw_score = None
     if available_weight > 0:
-        score = sum(c.score * c.weight * c.confidence for c in available) / available_weight
-        score = round(clamp(score), 1)
+        raw_score = sum(c.score * c.weight * c.confidence for c in available) / available_weight
+        raw_score = round(clamp(raw_score), 1)
+        score = raw_score
+
+    score, score_adjustments = apply_score_adjustments(score, breadth)
+    if score_adjustments:
+        warnings.extend([item.message for item in score_adjustments])
 
     label = classify_score(score)
     emotion_map = build_emotion_map(sectors)
@@ -113,6 +120,7 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     return AfgiResult(
         run_date=run_date,
         score=score,
+        raw_score=raw_score,
         label=label,
         formal=formal,
         suggested_position=suggest_position(score),
@@ -123,6 +131,7 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
         risk_tips=risk_tips,
         emotion_map=emotion_map,
         factor_contributions=factor_contributions,
+        score_adjustments=score_adjustments,
         index_allocation=index_allocation,
     )
 
@@ -173,6 +182,43 @@ def build_outlook(score: float | None, components: list[ComponentScore]) -> dict
         "flat": round(flat / total * 100, 1),
         "down": round(down / total * 100, 1),
     }
+
+
+def apply_score_adjustments(
+    score: float | None, breadth: MarketBreadth | None
+) -> tuple[float | None, list[ScoreAdjustment]]:
+    if score is None or not breadth or breadth.total <= 0:
+        return score, []
+
+    down_ratio = breadth.down / breadth.total
+    up_ratio = breadth.up / breadth.total
+    cap = None
+    if down_ratio >= 0.80:
+        cap = clamp(8 + up_ratio * 45, 10, 18)
+    elif down_ratio >= 0.75:
+        cap = 22.0
+    elif down_ratio >= 0.70:
+        cap = 26.0
+
+    if cap is None or score <= cap:
+        return score, []
+
+    adjusted = round(cap, 1)
+    condition = f"下跌股票占比 {down_ratio:.1%}（{breadth.down}/{breadth.total}）"
+    message = (
+        f"极端普跌压力校准：{condition}，市场宽度进入极端恐惧区，"
+        f"最终指数从 {score:.1f} 下调至 {adjusted:.1f}。"
+    )
+    return adjusted, [
+        ScoreAdjustment(
+            name="极端普跌压力校准",
+            before=round(score, 1),
+            after=adjusted,
+            impact=round(adjusted - score, 1),
+            condition=condition,
+            message=message,
+        )
+    ]
 
 
 def build_factor_contributions(components: list[ComponentScore]) -> list[FactorContribution]:
@@ -430,8 +476,14 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
     if not breadth or breadth.total <= 0:
         return _missing("breadth", "市场宽度", WEIGHTS["breadth"], "市场宽度数据未获取到。")
     up_ratio = breadth.up / breadth.total
+    down_ratio = breadth.down / breadth.total
     limit_balance = (breadth.limit_up - breadth.limit_down) / max(1, breadth.limit_up + breadth.limit_down)
     score = up_ratio * 75 + (limit_balance + 1) * 12.5
+    message = "市场宽度目前只有东方财富一个来源，可信度降低。"
+    if down_ratio >= 0.80:
+        message = "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。"
+    elif down_ratio >= 0.70:
+        message = "全市场下跌占比超过70%，普跌压力较强，市场宽度显著偏弱。"
     return ComponentScore(
         key="breadth",
         name="市场宽度",
@@ -439,7 +491,7 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
         weight=WEIGHTS["breadth"],
         status=QualityStatus.WARN,
         confidence=0.7,
-        message="市场宽度目前只有东方财富一个来源，可信度降低。",
+        message=message,
         details={
             "total": breadth.total,
             "up": breadth.up,
@@ -447,6 +499,7 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
             "limit_up": breadth.limit_up,
             "limit_down": breadth.limit_down,
             "up_ratio": round(up_ratio, 3),
+            "down_ratio": round(down_ratio, 3),
         },
     )
 
