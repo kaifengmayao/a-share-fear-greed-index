@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "run_date": "2026-07-07",
   "universe": {
     "primary_index": {
@@ -8,7 +8,51 @@
       "code": "000300",
       "secid": "1.000300",
       "asset_type": "index"
-    }
+    },
+    "allocation_indices": [
+      {
+        "name": "上证50",
+        "code": "000016",
+        "secid": "1.000016",
+        "asset_type": "index"
+      },
+      {
+        "name": "沪深300",
+        "code": "000300",
+        "secid": "1.000300",
+        "asset_type": "index"
+      },
+      {
+        "name": "中证500",
+        "code": "000905",
+        "secid": "1.000905",
+        "asset_type": "index"
+      },
+      {
+        "name": "中证1000",
+        "code": "000852",
+        "secid": "1.000852",
+        "asset_type": "index"
+      },
+      {
+        "name": "创业板指",
+        "code": "399006",
+        "secid": "0.399006",
+        "asset_type": "index"
+      },
+      {
+        "name": "科创50",
+        "code": "000688",
+        "secid": "1.000688",
+        "asset_type": "index"
+      },
+      {
+        "name": "深证成指",
+        "code": "399001",
+        "secid": "0.399001",
+        "asset_type": "index"
+      }
+    ]
   },
   "sources": {
     "csi300_index_quotes": {
@@ -68,15 +112,698 @@
       "error": "CSI300 index kline data is missing",
       "data": null
     },
+    "allocation_index_klines": {
+      "status": "OK",
+      "data": [
+        {
+          "name": "上证50",
+          "code": "000016",
+          "secid": "1.000016",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "沪深300",
+          "code": "000300",
+          "secid": "1.000300",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "中证500",
+          "code": "000905",
+          "secid": "1.000905",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "中证1000",
+          "code": "000852",
+          "secid": "1.000852",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "创业板指",
+          "code": "399006",
+          "secid": "0.399006",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "科创50",
+          "code": "000688",
+          "secid": "1.000688",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        },
+        {
+          "name": "深证成指",
+          "code": "399001",
+          "secid": "0.399001",
+          "klines": {
+            "status": "MISSING",
+            "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+            "data": null
+          }
+        }
+      ]
+    },
     "market_breadth": {
-      "status": "MISSING",
-      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=6000&po=1&np=1&fltt=2&invt=2&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f6",
-      "data": null
+      "status": "OK",
+      "data": {
+        "source": "东方财富",
+        "total": 80,
+        "up": 10,
+        "down": 69,
+        "flat": 1,
+        "limit_up": 1,
+        "limit_down": 2,
+        "total_amount": 51224362317.249985
+      }
     },
     "sectors": {
-      "status": "MISSING",
-      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fs=m:90+t:2&fields=f12,f14,f3,f6",
-      "data": null
+      "status": "OK",
+      "data": [
+        {
+          "code": "BK0420",
+          "name": "航空机场",
+          "pct_change": -2.19,
+          "amount": 3841904241.0
+        },
+        {
+          "code": "BK0421",
+          "name": "铁路公路",
+          "pct_change": -1.7,
+          "amount": 3002349551.0
+        },
+        {
+          "code": "BK0422",
+          "name": "物流",
+          "pct_change": -2.61,
+          "amount": 5451377335.0
+        },
+        {
+          "code": "BK0424",
+          "name": "水泥",
+          "pct_change": -2.64,
+          "amount": 2917422524.0
+        },
+        {
+          "code": "BK0427",
+          "name": "公用事业",
+          "pct_change": -2.95,
+          "amount": 47832977046.0
+        },
+        {
+          "code": "BK0428",
+          "name": "电力",
+          "pct_change": -3.01,
+          "amount": 43416835263.0
+        },
+        {
+          "code": "BK0433",
+          "name": "农林牧渔",
+          "pct_change": -2.22,
+          "amount": 16809206035.0
+        },
+        {
+          "code": "BK0436",
+          "name": "纺织服饰",
+          "pct_change": -2.84,
+          "amount": 10981041391.0
+        },
+        {
+          "code": "BK0437",
+          "name": "煤炭",
+          "pct_change": -3.31,
+          "amount": 11244389654.0
+        },
+        {
+          "code": "BK0438",
+          "name": "食品饮料",
+          "pct_change": -2.66,
+          "amount": 23291139569.0
+        },
+        {
+          "code": "BK0440",
+          "name": "家居用品",
+          "pct_change": -2.06,
+          "amount": 6052022484.0
+        },
+        {
+          "code": "BK0448",
+          "name": "通信设备",
+          "pct_change": -2.37,
+          "amount": 170453472102.0
+        },
+        {
+          "code": "BK0450",
+          "name": "航运港口",
+          "pct_change": -2.25,
+          "amount": 9586116745.0
+        },
+        {
+          "code": "BK0451",
+          "name": "房地产开发",
+          "pct_change": -2.89,
+          "amount": 16214387186.0
+        },
+        {
+          "code": "BK0454",
+          "name": "塑料",
+          "pct_change": -2.54,
+          "amount": 26565268289.0
+        },
+        {
+          "code": "BK0456",
+          "name": "家用电器",
+          "pct_change": -3.03,
+          "amount": 27710642029.0
+        },
+        {
+          "code": "BK0457",
+          "name": "电网设备",
+          "pct_change": -3.12,
+          "amount": 38795909116.0
+        },
+        {
+          "code": "BK0458",
+          "name": "仪器仪表",
+          "pct_change": -2.67,
+          "amount": 17114839016.0
+        },
+        {
+          "code": "BK0459",
+          "name": "元件",
+          "pct_change": -2.18,
+          "amount": 125616565200.0
+        },
+        {
+          "code": "BK0464",
+          "name": "石油石化",
+          "pct_change": -3.62,
+          "amount": 15926111256.0
+        },
+        {
+          "code": "BK0465",
+          "name": "化学制药",
+          "pct_change": -4.07,
+          "amount": 57359717136.0
+        },
+        {
+          "code": "BK0471",
+          "name": "化学纤维",
+          "pct_change": -3.61,
+          "amount": 5491571722.0
+        },
+        {
+          "code": "BK0473",
+          "name": "证券Ⅱ",
+          "pct_change": -2.55,
+          "amount": 43162281350.0
+        },
+        {
+          "code": "BK0474",
+          "name": "保险Ⅱ",
+          "pct_change": -2.19,
+          "amount": 8037293738.0
+        },
+        {
+          "code": "BK0475",
+          "name": "银行Ⅱ",
+          "pct_change": -0.4,
+          "amount": 24783599946.0
+        },
+        {
+          "code": "BK0476",
+          "name": "装修建材",
+          "pct_change": -2.27,
+          "amount": 6197495884.0
+        },
+        {
+          "code": "BK0478",
+          "name": "有色金属",
+          "pct_change": -2.77,
+          "amount": 137554374450.0
+        },
+        {
+          "code": "BK0479",
+          "name": "钢铁",
+          "pct_change": -1.87,
+          "amount": 7110711283.0
+        },
+        {
+          "code": "BK0481",
+          "name": "汽车零部件",
+          "pct_change": -2.72,
+          "amount": 64468283209.0
+        },
+        {
+          "code": "BK0482",
+          "name": "一般零售",
+          "pct_change": -3.05,
+          "amount": 5527644383.0
+        },
+        {
+          "code": "BK0484",
+          "name": "贸易Ⅱ",
+          "pct_change": -2.96,
+          "amount": 1447114772.0
+        },
+        {
+          "code": "BK0486",
+          "name": "传媒",
+          "pct_change": -1.59,
+          "amount": 49956650355.0
+        },
+        {
+          "code": "BK0538",
+          "name": "化学制品",
+          "pct_change": -2.65,
+          "amount": 64180224483.0
+        },
+        {
+          "code": "BK0539",
+          "name": "综合Ⅱ",
+          "pct_change": -2.68,
+          "amount": 4956841747.0
+        },
+        {
+          "code": "BK0545",
+          "name": "通用设备",
+          "pct_change": -2.73,
+          "amount": 101657217458.0
+        },
+        {
+          "code": "BK0546",
+          "name": "玻璃玻纤",
+          "pct_change": -2.71,
+          "amount": 28851509508.0
+        },
+        {
+          "code": "BK0725",
+          "name": "装修装饰Ⅱ",
+          "pct_change": -3.7,
+          "amount": 2405659307.0
+        },
+        {
+          "code": "BK0726",
+          "name": "工程咨询服务Ⅱ",
+          "pct_change": -3.09,
+          "amount": 12415706312.0
+        },
+        {
+          "code": "BK0727",
+          "name": "医疗服务",
+          "pct_change": -4.12,
+          "amount": 28661887525.0
+        },
+        {
+          "code": "BK0728",
+          "name": "环保",
+          "pct_change": -1.77,
+          "amount": 19320874342.0
+        },
+        {
+          "code": "BK0731",
+          "name": "农化制品",
+          "pct_change": -3.24,
+          "amount": 16943393065.0
+        },
+        {
+          "code": "BK0732",
+          "name": "贵金属",
+          "pct_change": -5.44,
+          "amount": 16159227233.0
+        },
+        {
+          "code": "BK0734",
+          "name": "饰品",
+          "pct_change": -3.38,
+          "amount": 1370641044.0
+        },
+        {
+          "code": "BK0735",
+          "name": "计算机设备",
+          "pct_change": -2.61,
+          "amount": 37934670409.0
+        },
+        {
+          "code": "BK0736",
+          "name": "通信服务",
+          "pct_change": -4.18,
+          "amount": 11557555256.0
+        },
+        {
+          "code": "BK0737",
+          "name": "软件开发",
+          "pct_change": -2.63,
+          "amount": 36435952026.0
+        },
+        {
+          "code": "BK0738",
+          "name": "多元金融",
+          "pct_change": -1.85,
+          "amount": 4719995837.0
+        },
+        {
+          "code": "BK0739",
+          "name": "工程机械",
+          "pct_change": -1.32,
+          "amount": 12604737192.0
+        },
+        {
+          "code": "BK0740",
+          "name": "教育",
+          "pct_change": -3.05,
+          "amount": 2911995280.0
+        },
+        {
+          "code": "BK0910",
+          "name": "专用设备",
+          "pct_change": -2.64,
+          "amount": 50860683715.0
+        },
+        {
+          "code": "BK1015",
+          "name": "能源金属",
+          "pct_change": -1.91,
+          "amount": 20652070825.0
+        },
+        {
+          "code": "BK1016",
+          "name": "汽车服务",
+          "pct_change": -1.87,
+          "amount": 678078094.0
+        },
+        {
+          "code": "BK1018",
+          "name": "橡胶",
+          "pct_change": -2.63,
+          "amount": 5081504067.0
+        },
+        {
+          "code": "BK1019",
+          "name": "化学原料",
+          "pct_change": -3.3,
+          "amount": 19913769834.0
+        },
+        {
+          "code": "BK1020",
+          "name": "非金属材料Ⅱ",
+          "pct_change": -2.62,
+          "amount": 6340889569.0
+        },
+        {
+          "code": "BK1027",
+          "name": "小金属",
+          "pct_change": -3.51,
+          "amount": 41739563185.0
+        },
+        {
+          "code": "BK1028",
+          "name": "燃气Ⅱ",
+          "pct_change": -2.73,
+          "amount": 4416141783.0
+        },
+        {
+          "code": "BK1030",
+          "name": "电机Ⅱ",
+          "pct_change": -3.48,
+          "amount": 9656516720.0
+        },
+        {
+          "code": "BK1031",
+          "name": "光伏设备",
+          "pct_change": -1.77,
+          "amount": 36333784628.0
+        },
+        {
+          "code": "BK1032",
+          "name": "风电设备",
+          "pct_change": -4.03,
+          "amount": 11010896907.0
+        },
+        {
+          "code": "BK1033",
+          "name": "电池",
+          "pct_change": -1.44,
+          "amount": 83319647485.0
+        },
+        {
+          "code": "BK1034",
+          "name": "其他电源设备Ⅱ",
+          "pct_change": -1.45,
+          "amount": 20375694697.0
+        },
+        {
+          "code": "BK1035",
+          "name": "美容护理",
+          "pct_change": -2.05,
+          "amount": 3206994612.0
+        },
+        {
+          "code": "BK1036",
+          "name": "半导体",
+          "pct_change": 0.57,
+          "amount": 461117906749.0
+        },
+        {
+          "code": "BK1037",
+          "name": "消费电子",
+          "pct_change": -2.82,
+          "amount": 78224684728.0
+        },
+        {
+          "code": "BK1038",
+          "name": "光学光电子",
+          "pct_change": -2.47,
+          "amount": 83492802040.0
+        },
+        {
+          "code": "BK1039",
+          "name": "电子化学品Ⅱ",
+          "pct_change": -0.99,
+          "amount": 53017269530.0
+        },
+        {
+          "code": "BK1040",
+          "name": "中药Ⅱ",
+          "pct_change": -3.41,
+          "amount": 8650688643.0
+        },
+        {
+          "code": "BK1041",
+          "name": "医疗器械",
+          "pct_change": -3.57,
+          "amount": 20010222260.0
+        },
+        {
+          "code": "BK1042",
+          "name": "医药商业",
+          "pct_change": -2.45,
+          "amount": 3094589203.0
+        },
+        {
+          "code": "BK1043",
+          "name": "专业服务",
+          "pct_change": -2.23,
+          "amount": 4756997409.0
+        },
+        {
+          "code": "BK1044",
+          "name": "生物制品",
+          "pct_change": -4.35,
+          "amount": 16929111885.0
+        },
+        {
+          "code": "BK1045",
+          "name": "房地产服务",
+          "pct_change": -3.72,
+          "amount": 816087453.0
+        },
+        {
+          "code": "BK1046",
+          "name": "游戏Ⅱ",
+          "pct_change": 0.84,
+          "amount": 21648327224.0
+        },
+        {
+          "code": "BK1200",
+          "name": "电力设备",
+          "pct_change": -2.41,
+          "amount": 199492449556.0
+        },
+        {
+          "code": "BK1201",
+          "name": "电子",
+          "pct_change": -1.39,
+          "amount": 830720266607.0
+        },
+        {
+          "code": "BK1202",
+          "name": "房地产",
+          "pct_change": -3.0,
+          "amount": 17030474639.0
+        },
+        {
+          "code": "BK1203",
+          "name": "非银金融",
+          "pct_change": -2.3,
+          "amount": 55919570925.0
+        },
+        {
+          "code": "BK1204",
+          "name": "国防军工",
+          "pct_change": -3.22,
+          "amount": 73559912656.0
+        },
+        {
+          "code": "BK1205",
+          "name": "机械设备",
+          "pct_change": -2.69,
+          "amount": 237336948893.0
+        },
+        {
+          "code": "BK1206",
+          "name": "基础化工",
+          "pct_change": -2.86,
+          "amount": 144516621033.0
+        },
+        {
+          "code": "BK1207",
+          "name": "计算机",
+          "pct_change": -2.87,
+          "amount": 113669149579.0
+        },
+        {
+          "code": "BK1208",
+          "name": "建筑材料",
+          "pct_change": -2.47,
+          "amount": 37966427917.0
+        },
+        {
+          "code": "BK1209",
+          "name": "建筑装饰",
+          "pct_change": -2.97,
+          "amount": 31801491423.0
+        },
+        {
+          "code": "BK1210",
+          "name": "交通运输",
+          "pct_change": -2.22,
+          "amount": 21881747875.0
+        },
+        {
+          "code": "BK1211",
+          "name": "汽车",
+          "pct_change": -2.59,
+          "amount": 78196125659.0
+        },
+        {
+          "code": "BK1212",
+          "name": "轻工制造",
+          "pct_change": -1.92,
+          "amount": 17217103325.0
+        },
+        {
+          "code": "BK1213",
+          "name": "商贸零售",
+          "pct_change": -2.97,
+          "amount": 11491504496.0
+        },
+        {
+          "code": "BK1214",
+          "name": "社会服务",
+          "pct_change": -2.74,
+          "amount": 10359207502.0
+        },
+        {
+          "code": "BK1215",
+          "name": "通信",
+          "pct_change": -2.91,
+          "amount": 182011027358.0
+        },
+        {
+          "code": "BK1216",
+          "name": "医药生物",
+          "pct_change": -3.78,
+          "amount": 134706216655.0
+        },
+        {
+          "code": "BK1217",
+          "name": "综合",
+          "pct_change": -2.68,
+          "amount": 4956841747.0
+        },
+        {
+          "code": "BK1218",
+          "name": "出版",
+          "pct_change": -2.23,
+          "amount": 1759202867.0
+        },
+        {
+          "code": "BK1219",
+          "name": "电视广播Ⅱ",
+          "pct_change": -2.43,
+          "amount": 1248850556.0
+        },
+        {
+          "code": "BK1220",
+          "name": "广告营销",
+          "pct_change": -2.56,
+          "amount": 10764556079.0
+        },
+        {
+          "code": "BK1221",
+          "name": "数字媒体",
+          "pct_change": -2.51,
+          "amount": 8706149863.0
+        },
+        {
+          "code": "BK1222",
+          "name": "影视院线",
+          "pct_change": -0.85,
+          "amount": 5829563763.0
+        },
+        {
+          "code": "BK1223",
+          "name": "其他电子Ⅱ",
+          "pct_change": -3.29,
+          "amount": 29251038357.0
+        },
+        {
+          "code": "BK1224",
+          "name": "纺织制造",
+          "pct_change": -2.32,
+          "amount": 3970737070.0
+        },
+        {
+          "code": "BK1225",
+          "name": "服装家纺",
+          "pct_change": -2.95,
+          "amount": 5639663276.0
+        }
+      ]
     },
     "institution_auxiliary": {
       "broad_etf_quotes": {
