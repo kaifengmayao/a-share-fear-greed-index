@@ -1,13 +1,13 @@
 {
   "run_date": "2026-07-07",
-  "score": 31.8,
-  "label": "中立",
+  "score": 12.6,
+  "label": "恐惧",
   "formal": false,
-  "suggested_position": "40%-60%",
+  "suggested_position": "20%-40%",
   "outlook": {
-    "up": 27.8,
-    "flat": 32.5,
-    "down": 39.7
+    "up": 23.4,
+    "flat": 32.9,
+    "down": 43.7
   },
   "components": [
     {
@@ -42,12 +42,20 @@
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 50.0,
+      "score": 20.2,
       "weight": 0.18,
-      "status": "MISSING",
-      "confidence": 0.0,
-      "message": "市场宽度数据未获取到。",
-      "details": {}
+      "status": "WARN",
+      "confidence": 0.7,
+      "message": "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。",
+      "details": {
+        "total": 507,
+        "up": 52,
+        "down": 453,
+        "limit_up": 7,
+        "limit_down": 7,
+        "up_ratio": 0.103,
+        "down_ratio": 0.893
+      }
     },
     {
       "key": "sector",
@@ -88,10 +96,11 @@
   ],
   "warnings": [
     "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
-    "市场宽度数据未获取到。",
+    "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。",
     "行业板块数据不足。",
     "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
-    "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+    "极端普跌压力校准：下跌股票占比 89.3%（453/507），市场宽度进入极端恐惧区，最终指数从 29.7 下调至 12.6。"
   ],
   "institution_view": [
     "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
@@ -106,7 +115,7 @@
     "weak": [],
     "concentration": 0.0
   },
-  "raw_score": 31.8,
+  "raw_score": 29.7,
   "factor_contributions": [
     {
       "key": "trend",
@@ -114,9 +123,9 @@
       "score": 38.6,
       "raw_weight": 0.2,
       "confidence": 1.0,
-      "effective_weight": 0.3534,
-      "contribution": 13.64,
-      "impact_vs_neutral": -4.03,
+      "effective_weight": 0.289,
+      "contribution": 11.16,
+      "impact_vs_neutral": -3.29,
       "status": "OK",
       "message": "趋势数据正常。"
     },
@@ -126,23 +135,23 @@
       "score": 49.7,
       "raw_weight": 0.15,
       "confidence": 0.8,
-      "effective_weight": 0.212,
-      "contribution": 10.54,
-      "impact_vs_neutral": -0.06,
+      "effective_weight": 0.1734,
+      "contribution": 8.62,
+      "impact_vs_neutral": -0.05,
       "status": "WARN",
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
     },
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 50.0,
+      "score": 20.2,
       "raw_weight": 0.18,
-      "confidence": 0.0,
-      "effective_weight": 0.0,
-      "contribution": 0.0,
-      "impact_vs_neutral": 0.0,
-      "status": "MISSING",
-      "message": "市场宽度数据未获取到。"
+      "confidence": 0.7,
+      "effective_weight": 0.1821,
+      "contribution": 3.68,
+      "impact_vs_neutral": -5.43,
+      "status": "WARN",
+      "message": "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。"
     },
     {
       "key": "sector",
@@ -162,9 +171,9 @@
       "score": 7.7,
       "raw_weight": 0.2,
       "confidence": 0.75,
-      "effective_weight": 0.265,
-      "contribution": 2.04,
-      "impact_vs_neutral": -11.21,
+      "effective_weight": 0.2168,
+      "contribution": 1.67,
+      "impact_vs_neutral": -9.17,
       "status": "WARN",
       "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。"
     },
@@ -174,14 +183,23 @@
       "score": 32.7,
       "raw_weight": 0.12,
       "confidence": 0.8,
-      "effective_weight": 0.1696,
-      "contribution": 5.55,
-      "impact_vs_neutral": -2.93,
+      "effective_weight": 0.1387,
+      "contribution": 4.54,
+      "impact_vs_neutral": -2.4,
       "status": "WARN",
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
     }
   ],
-  "score_adjustments": [],
+  "score_adjustments": [
+    {
+      "name": "极端普跌压力校准",
+      "before": 29.7,
+      "after": 12.6,
+      "impact": -17.1,
+      "condition": "下跌股票占比 89.3%（453/507）",
+      "message": "极端普跌压力校准：下跌股票占比 89.3%（453/507），市场宽度进入极端恐惧区，最终指数从 29.7 下调至 12.6。"
+    }
+  ],
   "index_allocation": [
     {
       "rank": 1,
@@ -310,5 +328,5 @@
       "warning": null
     }
   ],
-  "report_schema_version": 6
+  "report_schema_version": 7
 }
