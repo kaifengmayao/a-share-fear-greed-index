@@ -41,6 +41,13 @@ TENCENT_INDEX_SYMBOLS = {
     "0.399001": "sz399001",
 }
 
+EASTMONEY_CLIST_HOSTS = [
+    "push2.eastmoney.com",
+    "82.push2.eastmoney.com",
+    "33.push2.eastmoney.com",
+    "push2his.eastmoney.com",
+]
+
 
 class DataProviders:
     def __init__(self, http: HttpClient) -> None:
@@ -324,12 +331,7 @@ class DataProviders:
         per_page = min(max(page_size, 1), 100)
         total = page_size
         while len(rows) < min(page_size, total):
-            url = (
-                "https://push2.eastmoney.com/api/qt/clist/get"
-                f"?pn={page}&pz={per_page}&po=1&np=1&fltt=2&invt=2"
-                f"&fs={fs}&fields={fields}"
-            )
-            data = self.http.get_json(url).get("data") or {}
+            data = self._eastmoney_clist_page(fs, fields, page, per_page)
             total = int(data.get("total") or total)
             diff = data.get("diff") or []
             if not diff:
@@ -337,6 +339,25 @@ class DataProviders:
             rows.extend(diff)
             page += 1
         return rows[:page_size]
+
+    def _eastmoney_clist_page(
+        self, fs: str, fields: str, page: int, per_page: int
+    ) -> dict:
+        last_error: Exception | None = None
+        for _ in range(2):
+            for host in EASTMONEY_CLIST_HOSTS:
+                url = (
+                    f"https://{host}/api/qt/clist/get"
+                    f"?pn={page}&pz={per_page}&po=1&np=1&fltt=2&invt=2"
+                    f"&fs={fs}&fields={fields}"
+                )
+                try:
+                    return self.http.get_json(url).get("data") or {}
+                except Exception as exc:
+                    last_error = exc
+        if last_error is not None:
+            raise last_error
+        return {}
 
 
 def collect_attempts(
