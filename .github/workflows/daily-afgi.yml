@@ -41,12 +41,12 @@ jobs:
 
       - name: Commit report snapshot
         run: |
-          if [ -z "$(git status --porcelain reports)" ]; then
-            echo "No report changes to commit."
+          if [ -z "$(git status --porcelain reports data)" ]; then
+            echo "No report or data changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reports/*.md reports/*.json
+          git add reports/*.md reports/*.json data/history/*.json
           git commit -m "chore: update daily AFGI report"
           git push

@@ -32,6 +32,37 @@
 
 如果可用总权重低于 70%，当天报告会标记为“试算”。
 
+## 历史数据存储
+
+系统会在每天运行时保存一份免费数据快照：
+
+```text
+data/history/YYYY-MM-DD.json
+data/history/latest.json
+```
+
+当前快照包含：
+
+- 沪深300最近约260个交易日K线
+- 市场宽度
+- 行业板块强弱
+- 宽基ETF行情
+- IF股指期货主连行情
+
+日报本身会保存到：
+
+```text
+reports/YYYY-MM-DD.json
+reports/YYYY-MM-DD.md
+reports/latest.md
+```
+
+同一交易日如果已经存在 `reports/YYYY-MM-DD.json`，默认会复用这份日报，不重复计算指数，避免盘后免费接口刷新导致同一天分数跳动。如需强制重算，可设置环境变量：
+
+```text
+AFGI_FORCE_RECALCULATE=true
+```
+
 ## 微信推送方式
 
 默认支持三种免费/低门槛通道，任选其一即可：

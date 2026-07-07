@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .calculator import calculate_afgi
 from .config import Settings
+from .history import save_market_history
 from .http_client import HttpClient
 from .notifiers import send_wechat
 from .providers import DataProviders
@@ -14,16 +15,23 @@ from .utils import today_cn
 def main() -> None:
     settings = Settings.from_env()
     reports_dir = Path("reports")
-    json_path = reports_dir / f"{today_cn().isoformat()}.json"
+    data_dir = Path("data/history")
+    run_date = today_cn()
+    json_path = reports_dir / f"{run_date.isoformat()}.json"
+    history_path = data_dir / f"{run_date.isoformat()}.json"
+    providers = DataProviders(HttpClient(timeout=settings.request_timeout))
 
     if json_path.exists() and not settings.force_recalculate:
         result = load_report(json_path)
         markdown_path = reports_dir / f"{result.run_date.isoformat()}.md"
         print(f"Using cached daily report: {json_path}")
     else:
-        providers = DataProviders(HttpClient(timeout=settings.request_timeout))
         result = calculate_afgi(providers)
         markdown_path, json_path = save_reports(result, reports_dir)
+
+    if not history_path.exists() or settings.force_recalculate:
+        saved_history_path, _ = save_market_history(providers, data_dir, run_date)
+        print(f"Market history snapshot: {saved_history_path}")
 
     title = f"A股恐惧贪婪指数 {result.run_date.isoformat()}：{result.label}"
     content = render_wechat_markdown(result)

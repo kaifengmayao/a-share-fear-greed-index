@@ -79,6 +79,7 @@ class DataProviders:
             f"?secid={CSI300_SECID}&fields1=f1,f2,f3,f4,f5,f6"
             "&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
             "&klt=101&fqt=1&beg=0&end=20500101"
+            f"&lmt={limit}"
         )
         data = self.http.get_json(url).get("data") or {}
         rows = data.get("klines") or []
