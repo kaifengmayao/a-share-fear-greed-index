@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .calculator import calculate_afgi
 from .config import Settings
-from .http import HttpClient
+from .http_client import HttpClient
 from .notifiers import send_wechat
 from .providers import DataProviders
 from .report import render_wechat_markdown, save_reports
