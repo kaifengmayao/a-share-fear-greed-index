@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import re
+import time
 from typing import Callable
 
 from .http_client import HttpClient
@@ -331,20 +332,26 @@ class DataProviders:
         per_page = min(max(page_size, 1), 100)
         total = page_size
         while len(rows) < min(page_size, total):
-            data = self._eastmoney_clist_page(fs, fields, page, per_page)
+            try:
+                data = self._eastmoney_clist_page(fs, fields, page, per_page)
+            except Exception:
+                if rows:
+                    break
+                raise
             total = int(data.get("total") or total)
             diff = data.get("diff") or []
             if not diff:
                 break
             rows.extend(diff)
             page += 1
+            time.sleep(0.05)
         return rows[:page_size]
 
     def _eastmoney_clist_page(
         self, fs: str, fields: str, page: int, per_page: int
     ) -> dict:
         last_error: Exception | None = None
-        for _ in range(2):
+        for attempt in range(3):
             for host in EASTMONEY_CLIST_HOSTS:
                 url = (
                     f"https://{host}/api/qt/clist/get"
@@ -355,6 +362,7 @@ class DataProviders:
                     return self.http.get_json(url).get("data") or {}
                 except Exception as exc:
                     last_error = exc
+            time.sleep(0.25 * (attempt + 1))
         if last_error is not None:
             raise last_error
         return {}
