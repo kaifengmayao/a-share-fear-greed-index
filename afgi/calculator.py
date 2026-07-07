@@ -187,8 +187,27 @@ def build_outlook(score: float | None, components: list[ComponentScore]) -> dict
 def apply_score_adjustments(
     score: float | None, breadth: MarketBreadth | None
 ) -> tuple[float | None, list[ScoreAdjustment]]:
-    if score is None or not breadth or breadth.total <= 0:
+    if score is None:
         return score, []
+    if not breadth or breadth.total <= 0:
+        cap = 18.0
+        if score <= cap:
+            return score, []
+        adjusted = round(cap, 1)
+        message = (
+            "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，"
+            f"从 {score:.1f} 下调至 {adjusted:.1f}。"
+        )
+        return adjusted, [
+            ScoreAdjustment(
+                name="市场宽度缺失保守校准",
+                before=round(score, 1),
+                after=adjusted,
+                impact=round(adjusted - score, 1),
+                condition="市场宽度数据缺失",
+                message=message,
+            )
+        ]
 
     down_ratio = breadth.down / breadth.total
     up_ratio = breadth.up / breadth.total
