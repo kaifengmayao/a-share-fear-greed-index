@@ -102,6 +102,16 @@ class FactorContribution:
 
 
 @dataclass(frozen=True)
+class ScoreAdjustment:
+    name: str
+    before: float
+    after: float
+    impact: float
+    condition: str
+    message: str
+
+
+@dataclass(frozen=True)
 class IndexAllocationScore:
     rank: int
     name: str
@@ -134,5 +144,7 @@ class AfgiResult:
     institution_view: list[str]
     risk_tips: list[str]
     emotion_map: dict[str, Any]
+    raw_score: float | None = None
     factor_contributions: list[FactorContribution] = field(default_factory=list)
+    score_adjustments: list[ScoreAdjustment] = field(default_factory=list)
     index_allocation: list[IndexAllocationScore] = field(default_factory=list)
