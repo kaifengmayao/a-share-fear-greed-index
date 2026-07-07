@@ -41,7 +41,7 @@ jobs:
 
       - name: Commit report snapshot
         run: |
-          if git diff --quiet -- reports; then
+          if [ -z "$(git status --porcelain reports)" ]; then
             echo "No report changes to commit."
             exit 0
           fi

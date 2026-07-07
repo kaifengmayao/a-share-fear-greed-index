@@ -7,14 +7,24 @@ from .config import Settings
 from .http_client import HttpClient
 from .notifiers import send_wechat
 from .providers import DataProviders
-from .report import render_wechat_markdown, save_reports
+from .report import load_report, render_wechat_markdown, save_reports
+from .utils import today_cn
 
 
 def main() -> None:
     settings = Settings.from_env()
-    providers = DataProviders(HttpClient(timeout=settings.request_timeout))
-    result = calculate_afgi(providers)
-    markdown_path, json_path = save_reports(result, Path("reports"))
+    reports_dir = Path("reports")
+    json_path = reports_dir / f"{today_cn().isoformat()}.json"
+
+    if json_path.exists() and not settings.force_recalculate:
+        result = load_report(json_path)
+        markdown_path = reports_dir / f"{result.run_date.isoformat()}.md"
+        print(f"Using cached daily report: {json_path}")
+    else:
+        providers = DataProviders(HttpClient(timeout=settings.request_timeout))
+        result = calculate_afgi(providers)
+        markdown_path, json_path = save_reports(result, reports_dir)
+
     title = f"A股恐惧贪婪指数 {result.run_date.isoformat()}：{result.label}"
     content = render_wechat_markdown(result)
     send_results = send_wechat(settings, title=title, content=content)

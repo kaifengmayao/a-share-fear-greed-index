@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from datetime import date
 from pathlib import Path
 
-from .models import AfgiResult
+from .models import AfgiResult, ComponentScore, QualityStatus
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -108,3 +109,33 @@ def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:
         encoding="utf-8",
     )
     return markdown_path, json_path
+
+
+def load_report(json_path: Path) -> AfgiResult:
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    components = [
+        ComponentScore(
+            key=item["key"],
+            name=item["name"],
+            score=float(item["score"]),
+            weight=float(item["weight"]),
+            status=QualityStatus(item["status"]),
+            confidence=float(item["confidence"]),
+            message=item["message"],
+            details=item.get("details", {}),
+        )
+        for item in data.get("components", [])
+    ]
+    return AfgiResult(
+        run_date=date.fromisoformat(data["run_date"]),
+        score=data.get("score"),
+        label=data["label"],
+        formal=bool(data["formal"]),
+        suggested_position=data["suggested_position"],
+        outlook=data["outlook"],
+        components=components,
+        warnings=data.get("warnings", []),
+        institution_view=data.get("institution_view", []),
+        risk_tips=data.get("risk_tips", []),
+        emotion_map=data.get("emotion_map", {}),
+    )

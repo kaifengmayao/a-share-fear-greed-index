@@ -13,11 +13,13 @@ class Settings:
     wxpusher_uids: list[str] = field(default_factory=list)
     serverchan_sendkey: str | None = None
     dry_run: bool = False
+    force_recalculate: bool = False
 
     @staticmethod
     def from_env() -> "Settings":
         send_enabled = os.getenv("AFGI_SEND_ENABLED", "true").lower() == "true"
         dry_run = os.getenv("AFGI_DRY_RUN", "false").lower() == "true"
+        force_recalculate = os.getenv("AFGI_FORCE_RECALCULATE", "false").lower() == "true"
         wxpusher_uids = [
             item.strip()
             for item in os.getenv("WXPUSHER_UIDS", "").split(",")
@@ -31,4 +33,5 @@ class Settings:
             wxpusher_uids=wxpusher_uids,
             serverchan_sendkey=os.getenv("SERVERCHAN_SENDKEY") or None,
             dry_run=dry_run,
+            force_recalculate=force_recalculate,
         )
