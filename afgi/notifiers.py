@@ -17,6 +17,12 @@ def send_wechat(settings: Settings, title: str, content: str) -> list[str]:
             timeout=settings.request_timeout,
         )
         response.raise_for_status()
+        payload = _json_or_text(response)
+        if isinstance(payload, dict) and payload.get("errcode") not in (0, "0", None):
+            raise RuntimeError(
+                "企业微信机器人发送失败："
+                f"errcode={payload.get('errcode')} errmsg={payload.get('errmsg')}"
+            )
         results.append("企业微信机器人发送成功。")
 
     if settings.wxpusher_app_token and settings.wxpusher_uids:
@@ -32,6 +38,9 @@ def send_wechat(settings: Settings, title: str, content: str) -> list[str]:
             timeout=settings.request_timeout,
         )
         response.raise_for_status()
+        payload = _json_or_text(response)
+        if isinstance(payload, dict) and payload.get("code") not in (1000, "1000", None):
+            raise RuntimeError(f"WxPusher发送失败：{payload}")
         results.append("WxPusher发送成功。")
 
     if settings.serverchan_sendkey:
@@ -41,8 +50,20 @@ def send_wechat(settings: Settings, title: str, content: str) -> list[str]:
             timeout=settings.request_timeout,
         )
         response.raise_for_status()
+        payload = _json_or_text(response)
+        if isinstance(payload, dict):
+            code = payload.get("code", payload.get("errno"))
+            if code not in (0, "0", None):
+                raise RuntimeError(f"Server酱发送失败：{payload}")
         results.append("Server酱发送成功。")
 
     if not results:
         results.append("未配置微信推送密钥，已只生成本地报告。")
     return results
+
+
+def _json_or_text(response: requests.Response):
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
