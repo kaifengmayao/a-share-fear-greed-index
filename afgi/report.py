@@ -14,6 +14,9 @@ from .models import (
 )
 
 
+REPORT_SCHEMA_VERSION = 2
+
+
 def render_markdown(result: AfgiResult) -> str:
     score_text = "N/A" if result.score is None else f"{result.score:.1f}"
     title_prefix = "A股恐惧贪婪指数"
@@ -156,8 +159,10 @@ def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:
     markdown = render_markdown(result)
     markdown_path.write_text(markdown, encoding="utf-8")
     latest_path.write_text(markdown, encoding="utf-8")
+    payload = asdict(result)
+    payload["report_schema_version"] = REPORT_SCHEMA_VERSION
     json_path.write_text(
-        json.dumps(asdict(result), ensure_ascii=False, indent=2, default=str),
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",
     )
     return markdown_path, json_path
@@ -169,6 +174,8 @@ def report_needs_refresh(json_path: Path) -> bool:
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
     except Exception:
+        return True
+    if data.get("report_schema_version") != REPORT_SCHEMA_VERSION:
         return True
     return not data.get("factor_contributions") or not data.get("index_allocation")
 
