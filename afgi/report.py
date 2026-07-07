@@ -15,7 +15,7 @@ from .models import (
 )
 
 
-REPORT_SCHEMA_VERSION = 4
+REPORT_SCHEMA_VERSION = 5
 
 
 def render_markdown(result: AfgiResult) -> str:
