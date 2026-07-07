@@ -1,0 +1,418 @@
+from __future__ import annotations
+
+import math
+import statistics
+
+from .models import (
+    AfgiResult,
+    ComponentScore,
+    KLine,
+    MarketBreadth,
+    QualityStatus,
+    Quote,
+    SectorSnapshot,
+    SourceValue,
+)
+from .providers import DataProviders, collect_attempts
+from .quality import consensus
+from .utils import clamp, mean, pct_to_score, today_cn
+
+
+WEIGHTS = {
+    "trend": 0.20,
+    "breadth": 0.18,
+    "liquidity": 0.15,
+    "institution": 0.20,
+    "risk": 0.12,
+    "sector": 0.15,
+}
+
+
+def calculate_afgi(providers: DataProviders) -> AfgiResult:
+    warnings: list[str] = []
+    components: list[ComponentScore] = []
+
+    quote_attempts = collect_attempts(
+        [
+            ("东方财富", providers.eastmoney_csi300_quote),
+            ("新浪财经", providers.sina_csi300_quote),
+            ("腾讯财经", providers.tencent_csi300_quote),
+        ]
+    )
+    quotes = [quote for _, quote, _ in quote_attempts if quote is not None]
+    price_quality = consensus(
+        "沪深300点位",
+        [
+            SourceValue(quote.source, quote.price, quote.trade_date)
+            if quote is not None
+            else SourceValue(source_name, None, error=error)
+            for source_name, quote, error in quote_attempts
+        ],
+        relative_tolerance=0.001,
+        absolute_tolerance=2.0,
+    )
+    pct_quality = consensus(
+        "沪深300涨跌幅",
+        [
+            SourceValue(quote.source, quote.pct_change, quote.trade_date)
+            if quote is not None
+            else SourceValue(source_name, None, error=error)
+            for source_name, quote, error in quote_attempts
+        ],
+        relative_tolerance=0.25,
+        absolute_tolerance=0.12,
+    )
+    for quality in (price_quality, pct_quality):
+        if quality.status != QualityStatus.OK:
+            warnings.append(quality.message)
+
+    klines = _safe_call(providers.csi300_klines, [])
+    latest_kline_date = klines[-1].trade_date if klines else None
+    run_date = today_cn()
+    if latest_kline_date and latest_kline_date < run_date.isoformat() and run_date.weekday() < 5:
+        warnings.append(f"沪深300历史行情最新日期为 {latest_kline_date}，可能不是今日收盘数据。")
+    components.append(_trend_component(klines, pct_quality))
+    components.append(_liquidity_component(klines))
+
+    breadth = _safe_call(providers.eastmoney_breadth, None)
+    components.append(_breadth_component(breadth))
+
+    sectors = _safe_call(providers.eastmoney_sectors, [])
+    components.append(_sector_component(sectors))
+
+    etfs = _safe_call(providers.eastmoney_etfs, [])
+    future_quote = _safe_call(providers.sina_if_main, None)
+    components.append(_institution_component(etfs, future_quote, price_quality))
+
+    components.append(_risk_component(klines))
+
+    for component in components:
+        if component.status != QualityStatus.OK:
+            warnings.append(component.message)
+
+    available = [
+        c for c in components if c.status not in (QualityStatus.MISSING, QualityStatus.CONFLICT)
+    ]
+    available_weight = sum(c.weight * c.confidence for c in available)
+    formal = available_weight >= 0.70
+    score = None
+    if available_weight > 0:
+        score = sum(c.score * c.weight * c.confidence for c in available) / available_weight
+        score = round(clamp(score), 1)
+
+    label = classify_score(score)
+    emotion_map = build_emotion_map(sectors)
+    outlook = build_outlook(score, components)
+    institution_view = build_institution_view(etfs, future_quote, price_quality)
+    risk_tips = build_risk_tips(score, components, emotion_map, formal)
+
+    return AfgiResult(
+        run_date=run_date,
+        score=score,
+        label=label,
+        formal=formal,
+        suggested_position=suggest_position(score),
+        outlook=outlook,
+        components=components,
+        warnings=_dedupe(warnings),
+        institution_view=institution_view,
+        risk_tips=risk_tips,
+        emotion_map=emotion_map,
+    )
+
+
+def classify_score(score: float | None) -> str:
+    if score is None:
+        return "无法计算"
+    if score < 10:
+        return "极度恐惧"
+    if score < 30:
+        return "恐惧"
+    if score < 70:
+        return "中立"
+    if score < 90:
+        return "贪婪"
+    return "极度贪婪"
+
+
+def suggest_position(score: float | None) -> str:
+    if score is None:
+        return "暂停新增仓位，等待数据恢复"
+    if score < 10:
+        return "0%-20%"
+    if score < 30:
+        return "20%-40%"
+    if score < 70:
+        return "40%-60%"
+    if score < 90:
+        return "60%-80%"
+    return "50%-65%，避免追高"
+
+
+def build_outlook(score: float | None, components: list[ComponentScore]) -> dict[str, float]:
+    if score is None:
+        return {"up": 33.0, "flat": 34.0, "down": 33.0}
+    breadth = _component_score(components, "breadth", 50)
+    trend = _component_score(components, "trend", 50)
+    institution = _component_score(components, "institution", 50)
+    edge = (score - 50) * 0.35 + (trend - 50) * 0.25 + (breadth - 50) * 0.2 + (
+        institution - 50
+    ) * 0.2
+    up = clamp(34 + edge * 0.35, 12, 68)
+    down = clamp(34 - edge * 0.32, 12, 68)
+    flat = clamp(100 - up - down, 18, 55)
+    total = up + flat + down
+    return {
+        "up": round(up / total * 100, 1),
+        "flat": round(flat / total * 100, 1),
+        "down": round(down / total * 100, 1),
+    }
+
+
+def build_institution_view(
+    etfs: list[Quote], future_quote: Quote | None, price_quality
+) -> list[str]:
+    notes: list[str] = []
+    etf_pct = mean([q.pct_change for q in etfs if q.pct_change is not None])
+    if etf_pct is None:
+        notes.append("ETF资金：未获取到可用宽基ETF行情。")
+    elif etf_pct > 0.6:
+        notes.append("ETF资金：宽基ETF整体走强，机构/被动资金态度偏积极。")
+    elif etf_pct < -0.6:
+        notes.append("ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。")
+    else:
+        notes.append("ETF资金：宽基ETF波动不大，机构态度中性。")
+
+    if future_quote and price_quality.value:
+        basis = future_quote.price - price_quality.value
+        if basis > price_quality.value * 0.002:
+            notes.append("股指期货：IF主连相对沪深300升水，期货端偏乐观。")
+        elif basis < -price_quality.value * 0.002:
+            notes.append("股指期货：IF主连相对沪深300贴水，期货端偏谨慎。")
+        else:
+            notes.append("股指期货：IF主连基差接近中性。")
+    else:
+        notes.append("股指期货：期货数据源异常或不足，已降低机构态度权重。")
+
+    notes.append("融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。")
+    return notes
+
+
+def build_risk_tips(
+    score: float | None,
+    components: list[ComponentScore],
+    emotion_map: dict,
+    formal: bool,
+) -> list[str]:
+    tips: list[str] = []
+    if not formal:
+        tips.append("今日可用数据权重不足70%，指数为试算值，不建议作为正式仓位信号。")
+    if score is not None and score >= 90:
+        tips.append("情绪进入极度贪婪区，防止追高和主线拥挤回撤。")
+    elif score is not None and score <= 10:
+        tips.append("情绪进入极度恐惧区，短线波动大，左侧布局应控制节奏。")
+
+    breadth = _component_score(components, "breadth", 50)
+    trend = _component_score(components, "trend", 50)
+    if trend > 65 and breadth < 45:
+        tips.append("指数强于个股宽度，可能是权重股拉动，注意结构分化。")
+    if emotion_map.get("concentration", 0) > 0.55:
+        tips.append("板块热度集中度偏高，主线退潮时回撤可能放大。")
+    if not tips:
+        tips.append("暂无明显极端风险，继续观察资金扩散和期货基差变化。")
+    return tips
+
+
+def build_emotion_map(sectors: list[SectorSnapshot]) -> dict:
+    ranked = sorted(sectors, key=lambda item: item.pct_change, reverse=True)
+    top = ranked[:8]
+    bottom = ranked[-8:][::-1]
+    abs_sum = sum(abs(item.pct_change) for item in ranked[:20]) or 1
+    concentration = sum(abs(item.pct_change) for item in ranked[:5]) / abs_sum
+    return {
+        "strong": [
+            {"name": item.name, "pct_change": round(item.pct_change, 2), "amount": item.amount}
+            for item in top
+        ],
+        "weak": [
+            {"name": item.name, "pct_change": round(item.pct_change, 2), "amount": item.amount}
+            for item in bottom
+        ],
+        "concentration": round(concentration, 3),
+    }
+
+
+def _trend_component(klines: list[KLine], pct_quality) -> ComponentScore:
+    if len(klines) < 60:
+        return _missing("trend", "沪深300趋势", WEIGHTS["trend"], "沪深300历史行情不足，趋势模块缺失。")
+    closes = [k.close for k in klines]
+    close = closes[-1]
+    ma20 = statistics.fmean(closes[-20:])
+    ma60 = statistics.fmean(closes[-60:])
+    pct20 = (close / closes[-20] - 1) * 100
+    score = 50 + (close / ma20 - 1) * 900 + (ma20 / ma60 - 1) * 700 + pct20 * 2.2
+    status = QualityStatus.WARN if pct_quality.status != QualityStatus.OK else QualityStatus.OK
+    confidence = 0.8 if status == QualityStatus.WARN else 1.0
+    return ComponentScore(
+        key="trend",
+        name="沪深300趋势",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["trend"],
+        status=status,
+        confidence=confidence,
+        message="沪深300趋势仅部分来源通过验证，已降低权重。" if status == QualityStatus.WARN else "趋势数据正常。",
+        details={"close": close, "ma20": round(ma20, 2), "ma60": round(ma60, 2), "pct20": round(pct20, 2)},
+    )
+
+
+def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
+    if not breadth or breadth.total <= 0:
+        return _missing("breadth", "市场宽度", WEIGHTS["breadth"], "市场宽度数据未获取到。")
+    up_ratio = breadth.up / breadth.total
+    limit_balance = (breadth.limit_up - breadth.limit_down) / max(1, breadth.limit_up + breadth.limit_down)
+    score = up_ratio * 75 + (limit_balance + 1) * 12.5
+    return ComponentScore(
+        key="breadth",
+        name="市场宽度",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["breadth"],
+        status=QualityStatus.WARN,
+        confidence=0.7,
+        message="市场宽度目前只有东方财富一个来源，可信度降低。",
+        details={
+            "total": breadth.total,
+            "up": breadth.up,
+            "down": breadth.down,
+            "limit_up": breadth.limit_up,
+            "limit_down": breadth.limit_down,
+            "up_ratio": round(up_ratio, 3),
+        },
+    )
+
+
+def _liquidity_component(klines: list[KLine]) -> ComponentScore:
+    if len(klines) < 30:
+        return _missing("liquidity", "成交与流动性", WEIGHTS["liquidity"], "历史成交额不足，流动性模块缺失。")
+    amounts = [k.amount for k in klines]
+    recent = statistics.fmean(amounts[-5:])
+    base = statistics.fmean(amounts[-30:])
+    ratio = recent / base if base else 1
+    score = 50 + math.log(max(ratio, 0.1)) * 55
+    return ComponentScore(
+        key="liquidity",
+        name="成交与流动性",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["liquidity"],
+        status=QualityStatus.WARN,
+        confidence=0.8,
+        message="成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
+        details={"recent_amount": round(recent, 2), "base_amount": round(base, 2), "ratio": round(ratio, 3)},
+    )
+
+
+def _institution_component(
+    etfs: list[Quote], future_quote: Quote | None, price_quality
+) -> ComponentScore:
+    sub_scores: list[float] = []
+    details = {}
+    etf_pct = mean([q.pct_change for q in etfs if q.pct_change is not None])
+    if etf_pct is not None:
+        sub_scores.append(pct_to_score(etf_pct, scale=1.8))
+        details["etf_avg_pct"] = round(etf_pct, 3)
+
+    if future_quote and price_quality.value:
+        basis_pct = (future_quote.price / price_quality.value - 1) * 100
+        sub_scores.append(pct_to_score(basis_pct, scale=0.8))
+        details["if_basis_pct"] = round(basis_pct, 3)
+
+    if not sub_scores:
+        return _missing("institution", "机构态度", WEIGHTS["institution"], "ETF、股指期货、融资融券均未获取到可用数据。")
+
+    status = QualityStatus.WARN
+    confidence = 0.65 if len(sub_scores) == 1 else 0.75
+    return ComponentScore(
+        key="institution",
+        name="机构态度",
+        score=round(clamp(statistics.fmean(sub_scores)), 1),
+        weight=WEIGHTS["institution"],
+        status=status,
+        confidence=confidence,
+        message="机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+        details=details,
+    )
+
+
+def _risk_component(klines: list[KLine]) -> ComponentScore:
+    if len(klines) < 30:
+        return _missing("risk", "风险波动", WEIGHTS["risk"], "波动率数据不足。")
+    closes = [k.close for k in klines]
+    returns = [(closes[i] / closes[i - 1] - 1) * 100 for i in range(1, len(closes))]
+    vol20 = statistics.pstdev(returns[-20:])
+    pct5 = (closes[-1] / closes[-5] - 1) * 100
+    score = 62 - vol20 * 12 + pct5 * 3
+    return ComponentScore(
+        key="risk",
+        name="风险波动",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["risk"],
+        status=QualityStatus.WARN,
+        confidence=0.8,
+        message="风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+        details={"vol20": round(vol20, 3), "pct5": round(pct5, 3)},
+    )
+
+
+def _sector_component(sectors: list[SectorSnapshot]) -> ComponentScore:
+    if len(sectors) < 10:
+        return _missing("sector", "板块强弱", WEIGHTS["sector"], "行业板块数据不足。")
+    ranked = sorted(sectors, key=lambda item: item.pct_change, reverse=True)
+    top_mean = statistics.fmean([item.pct_change for item in ranked[:8]])
+    bottom_mean = statistics.fmean([item.pct_change for item in ranked[-8:]])
+    breadth = sum(1 for item in sectors if item.pct_change > 0) / len(sectors)
+    score = 50 + top_mean * 6 + bottom_mean * 2 + (breadth - 0.5) * 45
+    return ComponentScore(
+        key="sector",
+        name="板块强弱",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["sector"],
+        status=QualityStatus.WARN,
+        confidence=0.7,
+        message="板块强弱目前只有东方财富一个来源，情绪地图需结合人工复核。",
+        details={"top_mean": round(top_mean, 3), "bottom_mean": round(bottom_mean, 3), "sector_up_ratio": round(breadth, 3)},
+    )
+
+
+def _missing(key: str, name: str, weight: float, message: str) -> ComponentScore:
+    return ComponentScore(
+        key=key,
+        name=name,
+        score=50.0,
+        weight=weight,
+        status=QualityStatus.MISSING,
+        confidence=0.0,
+        message=message,
+    )
+
+
+def _component_score(components: list[ComponentScore], key: str, default: float) -> float:
+    for component in components:
+        if component.key == key:
+            return component.score
+    return default
+
+
+def _safe_call(fn, default):
+    try:
+        return fn()
+    except Exception:
+        return default
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    seen = set()
+    result = []
+    for item in items:
+        if item and item not in seen:
+            result.append(item)
+            seen.add(item)
+    return result
