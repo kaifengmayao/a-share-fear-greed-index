@@ -11,10 +11,11 @@ from .models import (
     FactorContribution,
     IndexAllocationScore,
     QualityStatus,
+    ScoreAdjustment,
 )
 
 
-REPORT_SCHEMA_VERSION = 3
+REPORT_SCHEMA_VERSION = 4
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -28,6 +29,7 @@ def render_markdown(result: AfgiResult) -> str:
         "",
         f"- 日期：{result.run_date.isoformat()}",
         f"- 指数：{score_text} / 100",
+        f"- 加权原始分：{'N/A' if result.raw_score is None else f'{result.raw_score:.1f}'} / 100",
         f"- 状态：{result.label}",
         f"- 建议仓位：{result.suggested_position}",
         "",
@@ -54,7 +56,7 @@ def render_markdown(result: AfgiResult) -> str:
 
     lines.extend(["", "## 因子贡献拆解", ""])
     if result.factor_contributions:
-        lines.append("| 因子 | 因子分 | 有效权重 | 对总分贡献 | 相对中性影响 | 状态 |")
+        lines.append("| 因子 | 因子分 | 有效权重 | 对原始分贡献 | 相对中性影响 | 状态 |")
         lines.append("|---|---:|---:|---:|---:|---|")
         for item in result.factor_contributions:
             lines.append(
@@ -64,6 +66,14 @@ def render_markdown(result: AfgiResult) -> str:
             )
     else:
         lines.append("- 暂无因子贡献拆解。")
+
+    if result.score_adjustments:
+        lines.extend(["", "## 分数校准项", ""])
+        for item in result.score_adjustments:
+            lines.append(
+                f"- {item.name}：{item.before:.1f} -> {item.after:.1f} "
+                f"（{item.impact:+.1f}），{item.condition}"
+            )
 
     lines.extend([
         "",
@@ -113,6 +123,7 @@ def render_wechat_markdown(result: AfgiResult) -> str:
         f"## A股恐惧贪婪指数{formal_note}",
         f"> 日期：{result.run_date.isoformat()}",
         f"> 指数：<font color=\"warning\">{score_text}</font> / 100",
+        f"> 加权原始分：{'N/A' if result.raw_score is None else f'{result.raw_score:.1f}'} / 100",
         f"> 状态：{result.label}",
         f"> 建议仓位：{result.suggested_position}",
         "",
@@ -135,6 +146,11 @@ def render_wechat_markdown(result: AfgiResult) -> str:
                 f"- {item.name}：贡献 {item.contribution:.2f} 分，"
                 f"相对中性 {item.impact_vs_neutral:+.2f}"
             )
+
+    if result.score_adjustments:
+        lines.extend(["", "### 分数校准项"])
+        for item in result.score_adjustments[:2]:
+            lines.append(f"- {item.name}：{item.before:.1f} -> {item.after:.1f}（{item.impact:+.1f}）")
 
     lines.extend(["", "### 数据质量提示"])
     lines.extend([f"- {item}" for item in warnings])
@@ -210,6 +226,17 @@ def load_report(json_path: Path) -> AfgiResult:
         )
         for item in data.get("factor_contributions", [])
     ]
+    score_adjustments = [
+        ScoreAdjustment(
+            name=item["name"],
+            before=float(item["before"]),
+            after=float(item["after"]),
+            impact=float(item["impact"]),
+            condition=item["condition"],
+            message=item["message"],
+        )
+        for item in data.get("score_adjustments", [])
+    ]
     index_allocation = [
         IndexAllocationScore(
             rank=int(item["rank"]),
@@ -238,6 +265,7 @@ def load_report(json_path: Path) -> AfgiResult:
     return AfgiResult(
         run_date=date.fromisoformat(data["run_date"]),
         score=data.get("score"),
+        raw_score=data.get("raw_score"),
         label=data["label"],
         formal=bool(data["formal"]),
         suggested_position=data["suggested_position"],
@@ -248,5 +276,6 @@ def load_report(json_path: Path) -> AfgiResult:
         risk_tips=data.get("risk_tips", []),
         emotion_map=data.get("emotion_map", {}),
         factor_contributions=factor_contributions,
+        score_adjustments=score_adjustments,
         index_allocation=index_allocation,
     )
