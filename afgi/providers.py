@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import re
 from typing import Callable
 
@@ -19,6 +20,16 @@ INDEX_ALLOCATION_UNIVERSE = [
     ("科创50", "000688", "1.000688"),
     ("深证成指", "399001", "0.399001"),
 ]
+
+YAHOO_INDEX_SYMBOLS = {
+    "1.000016": "000016.SS",
+    "1.000300": "000300.SS",
+    "1.000905": "000905.SS",
+    "1.000852": "000852.SS",
+    "0.399006": "399006.SZ",
+    "1.000688": "000688.SS",
+    "0.399001": "399001.SZ",
+}
 
 
 class DataProviders:
@@ -84,6 +95,15 @@ class DataProviders:
         )
 
     def index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
+        try:
+            klines = self._eastmoney_index_klines(secid, limit=limit)
+            if klines:
+                return klines
+        except Exception:
+            pass
+        return self._yahoo_index_klines(secid, limit=limit)
+
+    def _eastmoney_index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
         url = (
             "https://push2his.eastmoney.com/api/qt/stock/kline/get"
             f"?secid={secid}&fields1=f1,f2,f3,f4,f5,f6"
@@ -110,6 +130,48 @@ class DataProviders:
                 )
             )
         return klines
+
+    def _yahoo_index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
+        symbol = YAHOO_INDEX_SYMBOLS.get(secid)
+        if not symbol:
+            raise ValueError(f"No Yahoo symbol mapping for {secid}")
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d"
+        result = ((self.http.get_json(url).get("chart") or {}).get("result") or [None])[0]
+        if not result:
+            raise ValueError(f"Yahoo chart has no result for {symbol}")
+        timestamps = result.get("timestamp") or []
+        quote = (((result.get("indicators") or {}).get("quote") or [None])[0]) or {}
+        opens = quote.get("open") or []
+        highs = quote.get("high") or []
+        lows = quote.get("low") or []
+        closes = quote.get("close") or []
+        volumes = quote.get("volume") or []
+        klines: list[KLine] = []
+        for index, timestamp in enumerate(timestamps):
+            try:
+                open_price = opens[index]
+                high_price = highs[index]
+                low_price = lows[index]
+                close_price = closes[index]
+                volume = volumes[index] if index < len(volumes) else 0
+            except IndexError:
+                continue
+            if None in (open_price, high_price, low_price, close_price):
+                continue
+            trade_date = datetime.fromtimestamp(int(timestamp)).date().isoformat()
+            amount = (float(volume or 0) * float(close_price or 0)) if volume else 0.0
+            klines.append(
+                KLine(
+                    trade_date=trade_date,
+                    open=float(open_price),
+                    close=float(close_price),
+                    high=float(high_price),
+                    low=float(low_price),
+                    volume=float(volume or 0),
+                    amount=amount,
+                )
+            )
+        return klines[-limit:]
 
     def csi300_klines(self, limit: int = 120) -> list[KLine]:
         return self.index_klines(CSI300_SECID, limit=limit)
