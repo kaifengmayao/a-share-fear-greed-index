@@ -105,7 +105,7 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
         raw_score = round(clamp(raw_score), 1)
         score = raw_score
 
-    score, score_adjustments = apply_score_adjustments(score, breadth)
+    score, score_adjustments = apply_score_adjustments(score, breadth, components)
     if score_adjustments:
         warnings.extend([item.message for item in score_adjustments])
 
@@ -185,12 +185,15 @@ def build_outlook(score: float | None, components: list[ComponentScore]) -> dict
 
 
 def apply_score_adjustments(
-    score: float | None, breadth: MarketBreadth | None
+    score: float | None, breadth: MarketBreadth | None, components: list[ComponentScore]
 ) -> tuple[float | None, list[ScoreAdjustment]]:
     if score is None:
         return score, []
     if not breadth or breadth.total <= 0:
-        cap = 18.0
+        trend = _component_score(components, "trend", 50)
+        institution = _component_score(components, "institution", 50)
+        risk = _component_score(components, "risk", 50)
+        cap = 13.5 if institution < 15 and trend < 45 and risk < 40 else 18.0
         if score <= cap:
             return score, []
         adjusted = round(cap, 1)
@@ -198,13 +201,16 @@ def apply_score_adjustments(
             "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，"
             f"从 {score:.1f} 下调至 {adjusted:.1f}。"
         )
+        condition = "市场宽度数据缺失"
+        if cap < 18.0:
+            condition += f"，且机构/趋势/风险同步偏弱（机构 {institution:.1f}，趋势 {trend:.1f}，风险 {risk:.1f}）"
         return adjusted, [
             ScoreAdjustment(
                 name="市场宽度缺失保守校准",
                 before=round(score, 1),
                 after=adjusted,
                 impact=round(adjusted - score, 1),
-                condition="市场宽度数据缺失",
+                condition=condition,
                 message=message,
             )
         ]
