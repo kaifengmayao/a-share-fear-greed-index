@@ -31,6 +31,16 @@ YAHOO_INDEX_SYMBOLS = {
     "0.399001": "399001.SZ",
 }
 
+TENCENT_INDEX_SYMBOLS = {
+    "1.000016": "sh000016",
+    "1.000300": "sh000300",
+    "1.000905": "sh000905",
+    "1.000852": "sh000852",
+    "0.399006": "sz399006",
+    "1.000688": "sh000688",
+    "0.399001": "sz399001",
+}
+
 
 class DataProviders:
     def __init__(self, http: HttpClient) -> None:
@@ -95,13 +105,21 @@ class DataProviders:
         )
 
     def index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
-        try:
-            klines = self._eastmoney_index_klines(secid, limit=limit)
-            if klines:
+        candidates: list[list[KLine]] = []
+        for fn in (
+            self._eastmoney_index_klines,
+            self._tencent_index_klines,
+            self._yahoo_index_klines,
+        ):
+            try:
+                klines = fn(secid, limit=limit)
+            except Exception:
+                continue
+            if len(klines) >= min(60, limit):
                 return klines
-        except Exception:
-            pass
-        return self._yahoo_index_klines(secid, limit=limit)
+            if klines:
+                candidates.append(klines)
+        return max(candidates, key=len) if candidates else []
 
     def _eastmoney_index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
         url = (
@@ -127,6 +145,35 @@ class DataProviders:
                     low=float(parts[4]),
                     volume=float(parts[5]),
                     amount=float(parts[6]),
+                )
+            )
+        return klines
+
+    def _tencent_index_klines(self, secid: str, limit: int = 120) -> list[KLine]:
+        symbol = TENCENT_INDEX_SYMBOLS.get(secid)
+        if not symbol:
+            raise ValueError(f"No Tencent symbol mapping for {secid}")
+        url = (
+            "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
+            f"?param={symbol},day,,,{limit},qfq"
+        )
+        data = self.http.get_json(url).get("data") or {}
+        rows = ((data.get(symbol) or {}).get("day")) or []
+        klines: list[KLine] = []
+        for row in rows[-limit:]:
+            if len(row) < 6:
+                continue
+            close = float(row[2])
+            volume = float(row[5])
+            klines.append(
+                KLine(
+                    trade_date=str(row[0]),
+                    open=float(row[1]),
+                    close=close,
+                    high=float(row[3]),
+                    low=float(row[4]),
+                    volume=volume,
+                    amount=volume * close,
                 )
             )
         return klines
