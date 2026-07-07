@@ -53,6 +53,7 @@ EASTMONEY_CLIST_HOSTS = [
 class DataProviders:
     def __init__(self, http: HttpClient) -> None:
         self.http = http
+        self._cache: dict[str, object] = {}
 
     def eastmoney_csi300_quote(self) -> Quote:
         url = (
@@ -232,6 +233,9 @@ class DataProviders:
         return self.index_klines(CSI300_SECID, limit=limit)
 
     def eastmoney_breadth(self) -> MarketBreadth:
+        cached = self._cache.get("eastmoney_breadth")
+        if isinstance(cached, MarketBreadth):
+            return cached
         rows = self._eastmoney_clist(
             "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
             fields="f12,f14,f2,f3,f6",
@@ -243,7 +247,7 @@ class DataProviders:
         up = sum(1 for value in changes if value > 0)
         down = sum(1 for value in changes if value < 0)
         flat = sum(1 for value in changes if value == 0)
-        return MarketBreadth(
+        breadth = MarketBreadth(
             source="东方财富",
             total=len(changes),
             up=up,
@@ -253,6 +257,8 @@ class DataProviders:
             limit_down=sum(1 for value in changes if value <= -9.5),
             total_amount=total_amount,
         )
+        self._cache["eastmoney_breadth"] = breadth
+        return breadth
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
         rows = self._eastmoney_clist("m:90+t:2", fields="f12,f14,f3,f6", page_size=100)
@@ -344,14 +350,14 @@ class DataProviders:
                 break
             rows.extend(diff)
             page += 1
-            time.sleep(0.05)
+            time.sleep(0.15)
         return rows[:page_size]
 
     def _eastmoney_clist_page(
         self, fs: str, fields: str, page: int, per_page: int
     ) -> dict:
         last_error: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(4):
             for host in EASTMONEY_CLIST_HOSTS:
                 url = (
                     f"https://{host}/api/qt/clist/get"
@@ -359,10 +365,16 @@ class DataProviders:
                     f"&fs={fs}&fields={fields}"
                 )
                 try:
-                    return self.http.get_json(url).get("data") or {}
+                    return self.http.get_json(
+                        url,
+                        headers={
+                            "Connection": "close",
+                            "Referer": "https://quote.eastmoney.com/",
+                        },
+                    ).get("data") or {}
                 except Exception as exc:
                     last_error = exc
-            time.sleep(0.25 * (attempt + 1))
+            time.sleep(0.5 * (attempt + 1))
         if last_error is not None:
             raise last_error
         return {}
