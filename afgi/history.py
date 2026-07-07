@@ -6,10 +6,10 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
-from .providers import DataProviders, collect_attempts
+from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
 
 
-HISTORY_SCHEMA_VERSION = 3
+HISTORY_SCHEMA_VERSION = 4
 
 
 def save_market_history(
@@ -29,7 +29,11 @@ def save_market_history(
                 "code": "000300",
                 "secid": "1.000300",
                 "asset_type": "index",
-            }
+            },
+            "allocation_indices": [
+                {"name": name, "code": code, "secid": secid, "asset_type": "index"}
+                for name, code, secid in INDEX_ALLOCATION_UNIVERSE
+            ],
         },
         "sources": {
             "csi300_index_quotes": _capture(lambda: _csi300_quote_attempts(providers)),
@@ -37,6 +41,7 @@ def save_market_history(
             "csi300_index_volume_summary": _capture(
                 lambda: _volume_summary(csi300_klines.get("data") or [])
             ),
+            "allocation_index_klines": _capture(lambda: _allocation_index_klines(providers)),
             "market_breadth": _capture(providers.eastmoney_breadth),
             "sectors": _capture(providers.eastmoney_sectors),
             "institution_auxiliary": {
@@ -81,6 +86,19 @@ def _csi300_quote_attempts(providers: DataProviders) -> list[dict[str, Any]]:
         }
         for source, quote, error in attempts
     ]
+
+
+def _allocation_index_klines(providers: DataProviders) -> list[dict[str, Any]]:
+    snapshots: list[dict[str, Any]] = []
+    for name, code, secid in INDEX_ALLOCATION_UNIVERSE:
+        item = {
+            "name": name,
+            "code": code,
+            "secid": secid,
+            "klines": _capture(lambda secid=secid: providers.index_klines(secid, limit=120)),
+        }
+        snapshots.append(item)
+    return snapshots
 
 
 def _volume_summary(klines: list[dict[str, Any]]) -> dict[str, Any]:
