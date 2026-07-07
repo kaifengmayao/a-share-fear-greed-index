@@ -9,7 +9,7 @@ from typing import Any, Callable
 from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
 
 
-HISTORY_SCHEMA_VERSION = 7
+HISTORY_SCHEMA_VERSION = 8
 
 
 def save_market_history(
