@@ -1,13 +1,13 @@
 {
   "run_date": "2026-07-07",
-  "score": 31.8,
-  "label": "中立",
+  "score": 18.0,
+  "label": "恐惧",
   "formal": false,
-  "suggested_position": "40%-60%",
+  "suggested_position": "20%-40%",
   "outlook": {
-    "up": 27.8,
-    "flat": 32.5,
-    "down": 39.7
+    "up": 26.1,
+    "flat": 32.7,
+    "down": 41.2
   },
   "components": [
     {
@@ -91,7 +91,8 @@
     "市场宽度数据未获取到。",
     "行业板块数据不足。",
     "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
-    "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+    "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 31.8 下调至 18.0。"
   ],
   "institution_view": [
     "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
@@ -181,7 +182,16 @@
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
     }
   ],
-  "score_adjustments": [],
+  "score_adjustments": [
+    {
+      "name": "市场宽度缺失保守校准",
+      "before": 31.8,
+      "after": 18.0,
+      "impact": -13.8,
+      "condition": "市场宽度数据缺失",
+      "message": "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 31.8 下调至 18.0。"
+    }
+  ],
   "index_allocation": [
     {
       "rank": 1,
@@ -310,5 +320,5 @@
       "warning": null
     }
   ],
-  "report_schema_version": 8
+  "report_schema_version": 9
 }
