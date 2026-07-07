@@ -1,0 +1,100 @@
+{
+  "run_date": "2026-07-07",
+  "sources": {
+    "csi300_klines": {
+      "status": "MISSING",
+      "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+      "data": null
+    },
+    "market_breadth": {
+      "status": "MISSING",
+      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=6000&po=1&np=1&fltt=2&invt=2&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f6",
+      "data": null
+    },
+    "sectors": {
+      "status": "MISSING",
+      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fs=m:90+t:2&fields=f12,f14,f3,f6",
+      "data": null
+    },
+    "etfs": {
+      "status": "OK",
+      "data": [
+        {
+          "source": "东方财富ETF",
+          "name": "沪深300ETF华泰柏瑞",
+          "price": 4.826,
+          "previous_close": 4.877,
+          "pct_change": -1.05,
+          "amount": 3378515920.0,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "沪深300ETF华夏",
+          "price": 5.036,
+          "previous_close": 5.083,
+          "pct_change": -0.92,
+          "amount": 562346784.0,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "沪深300ETF嘉实",
+          "price": 5.032,
+          "previous_close": 5.087,
+          "pct_change": -1.08,
+          "amount": 799897708.149,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "沪深300ETF易方达",
+          "price": 4.68,
+          "previous_close": 4.729,
+          "pct_change": -1.04,
+          "amount": 940259131.0,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "上证50ETF华夏",
+          "price": 3.012,
+          "previous_close": 3.046,
+          "pct_change": -1.12,
+          "amount": 1378808696.0,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "中证500ETF嘉实",
+          "price": 3.45,
+          "previous_close": 3.507,
+          "pct_change": -1.63,
+          "amount": 423472845.804,
+          "trade_date": null
+        },
+        {
+          "source": "东方财富ETF",
+          "name": "中证500ETF华夏",
+          "price": 4.8,
+          "previous_close": 4.891,
+          "pct_change": -1.86,
+          "amount": 592133055.0,
+          "trade_date": null
+        }
+      ]
+    },
+    "if_main": {
+      "status": "OK",
+      "data": {
+        "source": "新浪期货",
+        "name": "4725.600",
+        "price": 4703.4,
+        "previous_close": 4280.0,
+        "pct_change": 9.892523364485983,
+        "amount": null,
+        "trade_date": null
+      }
+    }
+  }
+}
