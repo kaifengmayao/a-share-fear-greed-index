@@ -8,7 +8,7 @@ from .history import history_snapshot_needs_refresh, save_market_history
 from .http_client import HttpClient
 from .notifiers import send_wechat
 from .providers import DataProviders
-from .report import load_report, render_wechat_markdown, save_reports
+from .report import load_report, render_wechat_markdown, report_needs_refresh, save_reports
 from .utils import today_cn
 
 
@@ -21,7 +21,7 @@ def main() -> None:
     history_path = data_dir / f"{run_date.isoformat()}.json"
     providers = DataProviders(HttpClient(timeout=settings.request_timeout))
 
-    if json_path.exists() and not settings.force_recalculate:
+    if json_path.exists() and not settings.force_recalculate and not report_needs_refresh(json_path):
         result = load_report(json_path)
         markdown_path = reports_dir / f"{result.run_date.isoformat()}.md"
         print(f"Using cached daily report: {json_path}")
