@@ -1,5 +1,5 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "run_date": "2026-07-07",
   "universe": {
     "primary_index": {
@@ -10101,12 +10101,12 @@
     },
     "market_breadth": {
       "status": "MISSING",
-      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f2,f3,f6",
+      "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
       "data": null
     },
     "sectors": {
       "status": "MISSING",
-      "error": "502 Server Error: Bad Gateway for url: https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fs=m:90+t:2&fields=f12,f14,f3,f6",
+      "error": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
       "data": null
     },
     "institution_auxiliary": {
