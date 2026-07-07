@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .calculator import calculate_afgi
 from .config import Settings
-from .history import save_market_history
+from .history import history_snapshot_needs_refresh, save_market_history
 from .http_client import HttpClient
 from .notifiers import send_wechat
 from .providers import DataProviders
@@ -29,7 +29,7 @@ def main() -> None:
         result = calculate_afgi(providers)
         markdown_path, json_path = save_reports(result, reports_dir)
 
-    if not history_path.exists() or settings.force_recalculate:
+    if history_snapshot_needs_refresh(history_path) or settings.force_recalculate:
         saved_history_path, _ = save_market_history(providers, data_dir, run_date)
         print(f"Market history snapshot: {saved_history_path}")
 
