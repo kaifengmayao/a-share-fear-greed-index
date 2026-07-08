@@ -1,13 +1,13 @@
 {
   "run_date": "2026-07-08",
-  "score": 28.5,
-  "label": "恐惧",
-  "formal": false,
-  "suggested_position": "20%-40%",
+  "score": 31.7,
+  "label": "中立",
+  "formal": true,
+  "suggested_position": "40%-60%",
   "outlook": {
-    "up": 24.7,
-    "flat": 32.8,
-    "down": 42.5
+    "up": 26.2,
+    "flat": 32.7,
+    "down": 41.2
   },
   "components": [
     {
@@ -96,22 +96,93 @@
     {
       "key": "sector",
       "name": "板块强弱",
-      "score": 50.0,
+      "score": 36.9,
       "weight": 0.15,
-      "status": "MISSING",
-      "confidence": 0.0,
-      "message": "行业板块数据不足。",
-      "details": {}
+      "status": "WARN",
+      "confidence": 0.55,
+      "message": "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。",
+      "details": {
+        "source": "东方财富板块资金流降级",
+        "sector_count": 128,
+        "top_mean": 1.989,
+        "bottom_mean": -5.101,
+        "sector_up_ratio": 0.25,
+        "fund_positive_ratio": 0.273,
+        "internal_up_ratio": null,
+        "top_by_strength": [
+          {
+            "name": "油服工程",
+            "code": "BK1275",
+            "pct_change": 3.63,
+            "amount": 5020042373.0,
+            "main_net_inflow": 560691333.0,
+            "main_net_inflow_ratio": 11.17,
+            "up": null,
+            "down": null,
+            "flat": null,
+            "strength": 3.77
+          },
+          {
+            "name": "油气开采Ⅱ",
+            "code": "BK1276",
+            "pct_change": 3.12,
+            "amount": 3272536694.0,
+            "main_net_inflow": 271266064.0,
+            "main_net_inflow_ratio": 8.29,
+            "up": null,
+            "down": null,
+            "flat": null,
+            "strength": 3.188
+          },
+          {
+            "name": "IT服务Ⅱ",
+            "code": "BK1238",
+            "pct_change": 1.59,
+            "amount": 58335047280.0,
+            "main_net_inflow": 5142902016.0,
+            "main_net_inflow_ratio": 8.82,
+            "up": null,
+            "down": null,
+            "flat": null,
+            "strength": 2.872
+          },
+          {
+            "name": "旅游及景区",
+            "code": "BK1272",
+            "pct_change": 2.13,
+            "amount": 3485423440.0,
+            "main_net_inflow": 291463447.0,
+            "main_net_inflow_ratio": 8.36,
+            "up": null,
+            "down": null,
+            "flat": null,
+            "strength": 2.203
+          },
+          {
+            "name": "软件开发",
+            "code": "BK0737",
+            "pct_change": 1.61,
+            "amount": 48872783773.0,
+            "main_net_inflow": 1495789568.0,
+            "main_net_inflow_ratio": 3.06,
+            "up": null,
+            "down": null,
+            "flat": null,
+            "strength": 1.983
+          }
+        ]
+      }
     },
     {
       "key": "institution",
       "name": "机构态度",
-      "score": 0.0,
+      "score": 15.9,
       "weight": 0.2,
       "status": "WARN",
-      "confidence": 0.65,
+      "confidence": 0.75,
       "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
       "details": {
+        "etf_avg_pct": -0.657,
         "if_basis_pct": -1.841
       }
     },
@@ -132,24 +203,218 @@
   "warnings": [
     "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
     "市场宽度目前只有东方财富一个来源，可信度降低。",
-    "行业板块数据不足。",
+    "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。",
     "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
     "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
   ],
   "institution_view": [
-    "ETF资金：未获取到可用宽基ETF行情。",
+    "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
     "股指期货：IF主连相对沪深300贴水，期货端偏谨慎。",
     "融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。"
   ],
   "risk_tips": [
-    "今日可用数据权重不足70%，指数为试算值，不建议作为正式仓位信号。"
+    "暂无明显极端风险，继续观察资金扩散和期货基差变化。"
   ],
   "emotion_map": {
-    "strong": [],
-    "weak": [],
-    "concentration": 0.0
+    "strong": [
+      {
+        "name": "油服工程",
+        "code": "BK1275",
+        "pct_change": 3.63,
+        "amount": 5020042373.0,
+        "main_net_inflow": 560691333.0,
+        "main_net_inflow_ratio": 11.17,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 3.77
+      },
+      {
+        "name": "油气开采Ⅱ",
+        "code": "BK1276",
+        "pct_change": 3.12,
+        "amount": 3272536694.0,
+        "main_net_inflow": 271266064.0,
+        "main_net_inflow_ratio": 8.29,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 3.188
+      },
+      {
+        "name": "IT服务Ⅱ",
+        "code": "BK1238",
+        "pct_change": 1.59,
+        "amount": 58335047280.0,
+        "main_net_inflow": 5142902016.0,
+        "main_net_inflow_ratio": 8.82,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 2.872
+      },
+      {
+        "name": "旅游及景区",
+        "code": "BK1272",
+        "pct_change": 2.13,
+        "amount": 3485423440.0,
+        "main_net_inflow": 291463447.0,
+        "main_net_inflow_ratio": 8.36,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 2.203
+      },
+      {
+        "name": "软件开发",
+        "code": "BK0737",
+        "pct_change": 1.61,
+        "amount": 48872783773.0,
+        "main_net_inflow": 1495789568.0,
+        "main_net_inflow_ratio": 3.06,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 1.983
+      },
+      {
+        "name": "房屋建设Ⅱ",
+        "code": "BK1246",
+        "pct_change": 1.63,
+        "amount": 2122596097.0,
+        "main_net_inflow": 123594976.0,
+        "main_net_inflow_ratio": 5.82,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 1.661
+      },
+      {
+        "name": "计算机设备",
+        "code": "BK0735",
+        "pct_change": 1.07,
+        "amount": 45291812467.0,
+        "main_net_inflow": 1910277888.0,
+        "main_net_inflow_ratio": 4.22,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 1.546
+      },
+      {
+        "name": "贵金属",
+        "code": "BK0732",
+        "pct_change": 1.13,
+        "amount": 15432108084.0,
+        "main_net_inflow": 436148496.0,
+        "main_net_inflow_ratio": 2.83,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": 1.239
+      }
+    ],
+    "weak": [
+      {
+        "name": "能源金属",
+        "code": "BK1015",
+        "pct_change": -7.75,
+        "amount": 21380547038.0,
+        "main_net_inflow": -3071929936.0,
+        "main_net_inflow_ratio": -14.37,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -8.516
+      },
+      {
+        "name": "电池",
+        "code": "BK1033",
+        "pct_change": -5.35,
+        "amount": 86968174851.0,
+        "main_net_inflow": -8160467200.0,
+        "main_net_inflow_ratio": -9.38,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -7.384
+      },
+      {
+        "name": "非金属材料Ⅱ",
+        "code": "BK1020",
+        "pct_change": -5.57,
+        "amount": 6331584799.0,
+        "main_net_inflow": -622325984.0,
+        "main_net_inflow_ratio": -9.83,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -5.725
+      },
+      {
+        "name": "自动化设备",
+        "code": "BK1237",
+        "pct_change": -4.42,
+        "amount": 56086245912.0,
+        "main_net_inflow": -3555043328.0,
+        "main_net_inflow_ratio": -6.34,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -5.306
+      },
+      {
+        "name": "小金属",
+        "code": "BK1027",
+        "pct_change": -4.49,
+        "amount": 36976597300.0,
+        "main_net_inflow": -2941948416.0,
+        "main_net_inflow_ratio": -7.96,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -5.223
+      },
+      {
+        "name": "元件",
+        "code": "BK0459",
+        "pct_change": -3.97,
+        "amount": 120208285290.0,
+        "main_net_inflow": -4236329472.0,
+        "main_net_inflow_ratio": -3.52,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -5.026
+      },
+      {
+        "name": "金属新材料",
+        "code": "BK1288",
+        "pct_change": -4.63,
+        "amount": 16516049888.0,
+        "main_net_inflow": -1110621904.0,
+        "main_net_inflow_ratio": -6.72,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -4.907
+      },
+      {
+        "name": "电机Ⅱ",
+        "code": "BK1030",
+        "pct_change": -4.63,
+        "amount": 8032906108.0,
+        "main_net_inflow": -601389136.0,
+        "main_net_inflow_ratio": -7.49,
+        "up": null,
+        "down": null,
+        "flat": null,
+        "strength": -4.78
+      }
+    ],
+    "concentration": 0.497
   },
-  "raw_score": 28.5,
+  "raw_score": 31.7,
   "factor_contributions": [
     {
       "key": "trend",
@@ -157,9 +422,9 @@
       "score": 32.2,
       "raw_weight": 0.2,
       "confidence": 1.0,
-      "effective_weight": 0.2976,
-      "contribution": 9.58,
-      "impact_vs_neutral": -5.3,
+      "effective_weight": 0.2582,
+      "contribution": 8.32,
+      "impact_vs_neutral": -4.6,
       "status": "OK",
       "message": "趋势数据正常。"
     },
@@ -169,9 +434,9 @@
       "score": 46.0,
       "raw_weight": 0.15,
       "confidence": 0.8,
-      "effective_weight": 0.1786,
-      "contribution": 8.21,
-      "impact_vs_neutral": -0.71,
+      "effective_weight": 0.1549,
+      "contribution": 7.13,
+      "impact_vs_neutral": -0.62,
       "status": "WARN",
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
     },
@@ -181,33 +446,33 @@
       "score": 26.5,
       "raw_weight": 0.18,
       "confidence": 0.7,
-      "effective_weight": 0.1875,
-      "contribution": 4.97,
-      "impact_vs_neutral": -4.41,
+      "effective_weight": 0.1627,
+      "contribution": 4.31,
+      "impact_vs_neutral": -3.82,
       "status": "WARN",
       "message": "市场宽度目前只有东方财富一个来源，可信度降低。"
     },
     {
       "key": "sector",
       "name": "板块强弱",
-      "score": 50.0,
+      "score": 36.9,
       "raw_weight": 0.15,
-      "confidence": 0.0,
-      "effective_weight": 0.0,
-      "contribution": 0.0,
-      "impact_vs_neutral": 0.0,
-      "status": "MISSING",
-      "message": "行业板块数据不足。"
+      "confidence": 0.55,
+      "effective_weight": 0.1065,
+      "contribution": 3.93,
+      "impact_vs_neutral": -1.4,
+      "status": "WARN",
+      "message": "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。"
     },
     {
       "key": "institution",
       "name": "机构态度",
-      "score": 0.0,
+      "score": 15.9,
       "raw_weight": 0.2,
-      "confidence": 0.65,
-      "effective_weight": 0.1935,
-      "contribution": 0.0,
-      "impact_vs_neutral": -9.67,
+      "confidence": 0.75,
+      "effective_weight": 0.1937,
+      "contribution": 3.08,
+      "impact_vs_neutral": -6.6,
       "status": "WARN",
       "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。"
     },
@@ -217,9 +482,9 @@
       "score": 39.8,
       "raw_weight": 0.12,
       "confidence": 0.8,
-      "effective_weight": 0.1429,
-      "contribution": 5.69,
-      "impact_vs_neutral": -1.46,
+      "effective_weight": 0.124,
+      "contribution": 4.93,
+      "impact_vs_neutral": -1.26,
       "status": "WARN",
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
     }
@@ -353,5 +618,5 @@
       "warning": null
     }
   ],
-  "report_schema_version": 14
+  "report_schema_version": 15
 }
