@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from datetime import datetime
 import re
@@ -70,6 +71,11 @@ EASTMONEY_ULIST_BASES = [
     "https://33.push2.eastmoney.com",
     "https://push2his.eastmoney.com",
 ]
+
+SINA_MARKET_CENTER_URL = (
+    "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+    "Market_Center.getHQNodeData"
+)
 
 MARKET_BREADTH_INDICES = [
     ("上证市场", "1.000001"),
@@ -288,6 +294,13 @@ class DataProviders:
             return breadth
         except Exception as exc:
             errors.append(f"clist: {exc}")
+        try:
+            breadth = self._sina_market_center_breadth()
+            self._validate_market_breadth(breadth)
+            self._cache["eastmoney_breadth"] = breadth
+            return breadth
+        except Exception as exc:
+            errors.append(f"sina_market_center: {exc}")
         raise ValueError("Market breadth data failed coverage checks: " + " | ".join(errors))
 
     def _eastmoney_aggregate_breadth(self) -> MarketBreadth:
@@ -423,6 +436,70 @@ class DataProviders:
                 f"{breadth.source} inconsistent breadth total: "
                 f"total={breadth.total}, counted={counted}"
             )
+
+    def _sina_market_center_breadth(self) -> MarketBreadth:
+        rows: list[dict] = []
+        per_page = 80
+        for page in range(1, 90):
+            text = self.http.get_text(
+                SINA_MARKET_CENTER_URL,
+                params={
+                    "page": page,
+                    "num": per_page,
+                    "sort": "changepercent",
+                    "asc": "0",
+                    "node": "hs_a",
+                    "symbol": "",
+                    "_s_r_a": "page",
+                },
+                headers={
+                    "Connection": "close",
+                    "Referer": "https://vip.stock.finance.sina.com.cn/mkt/",
+                },
+            )
+            page_rows = _parse_sina_market_center_rows(text)
+            if not page_rows:
+                break
+            rows.extend(page_rows)
+            if len(page_rows) < per_page:
+                break
+            time.sleep(0.12)
+
+        changes = [safe_float(row.get("changepercent")) for row in rows]
+        changes = [item for item in changes if item is not None]
+        if not changes:
+            raise ValueError("Sina market center breadth is empty")
+
+        total_amount = sum(safe_float(row.get("amount")) or 0 for row in rows)
+        up = sum(1 for value in changes if value > 0)
+        down = sum(1 for value in changes if value < 0)
+        flat = sum(1 for value in changes if value == 0)
+        limit_up = sum(1 for value in changes if value >= 9.5)
+        limit_down = sum(1 for value in changes if value <= -9.5)
+
+        limit_stats = self._eastmoney_limit_stats()
+        if limit_stats.get("limit_up") is not None:
+            limit_up = int(limit_stats["limit_up"])
+        if limit_stats.get("limit_down") is not None:
+            limit_down = int(limit_stats["limit_down"])
+
+        return MarketBreadth(
+            source="新浪行情中心全A分页",
+            total=len(changes),
+            up=up,
+            down=down,
+            flat=flat,
+            limit_up=limit_up,
+            limit_down=limit_down,
+            total_amount=total_amount,
+            first_limit_up=limit_stats.get("first_limit_up"),
+            second_limit_up=limit_stats.get("second_limit_up"),
+            third_or_more_limit_up=limit_stats.get("third_or_more_limit_up"),
+            consecutive_limit_up=limit_stats.get("consecutive_limit_up"),
+            highest_consecutive_limit_up=limit_stats.get("highest_consecutive_limit_up"),
+            limit_up_pool_source=limit_stats.get("source"),
+            limit_up_pool_error=limit_stats.get("error"),
+        )
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
         try:
@@ -802,6 +879,20 @@ def _parse_sina_hq(text: str) -> list[str]:
     if not match:
         raise ValueError("Sina response has no quote payload")
     return match.group(1).split(",")
+
+
+def _parse_sina_market_center_rows(text: str) -> list[dict]:
+    payload = text.strip()
+    if not payload:
+        return []
+    if "=" in payload and not payload.startswith("["):
+        payload = payload.split("=", 1)[1].strip().rstrip(";")
+    data = json.loads(payload)
+    if data is None:
+        return []
+    if not isinstance(data, list):
+        raise ValueError("Sina market center response is not a list")
+    return [item for item in data if isinstance(item, dict)]
 
 
 def _parse_tencent_hq(text: str) -> list[str]:
