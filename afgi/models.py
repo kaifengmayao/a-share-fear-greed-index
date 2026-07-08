@@ -70,6 +70,18 @@ class SectorSnapshot:
 
 
 @dataclass(frozen=True)
+class MarginSnapshot:
+    source: str
+    trade_date: str | None
+    rzrq_balance: float | None
+    rzrq_balance_change: float | None
+    financing_net_buy: float | None
+    short_net_sell: float | None
+    rz_balance: float | None = None
+    rq_balance: float | None = None
+
+
+@dataclass(frozen=True)
 class MarketBreadth:
     source: str
     total: int

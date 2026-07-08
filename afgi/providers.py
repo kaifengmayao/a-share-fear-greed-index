@@ -7,8 +7,8 @@ import time
 from typing import Callable
 
 from .http_client import HttpClient
-from .models import KLine, MarketBreadth, Quote, SectorSnapshot
-from .utils import safe_float
+from .models import KLine, MarginSnapshot, MarketBreadth, Quote, SectorSnapshot
+from .utils import CN_TZ, safe_float
 
 
 CSI300_SECID = "1.000300"
@@ -529,11 +529,7 @@ class DataProviders:
         quotes: list[Quote] = []
         for secid in etfs:
             try:
-                url = (
-                    "https://push2.eastmoney.com/api/qt/stock/get"
-                    f"?secid={secid}&fields=f58,f43,f48,f60,f170"
-                )
-                data = self.http.get_json(url).get("data") or {}
+                data = self._eastmoney_stock_get(secid, "f58,f43,f48,f60,f170,f86")
                 price = (safe_float(data.get("f43")) or 0) / 1000
                 previous_close = (safe_float(data.get("f60")) or 0) / 1000
                 pct_change = (safe_float(data.get("f170")) or 0) / 100
@@ -545,7 +541,7 @@ class DataProviders:
                         previous_close=previous_close or None,
                         pct_change=pct_change,
                         amount=safe_float(data.get("f48")),
-                        trade_date=None,
+                        trade_date=_timestamp_to_cn_date(data.get("f86")),
                     )
                 )
             except Exception:
@@ -561,6 +557,7 @@ class DataProviders:
         pct_change = None
         if price is not None and previous_close:
             pct_change = (price / previous_close - 1) * 100
+        trade_date = fields[36] if len(fields) > 36 and fields[36] else None
         return Quote(
             source="新浪期货",
             name=fields[0] if fields else "IF主连",
@@ -568,7 +565,41 @@ class DataProviders:
             previous_close=previous_close,
             pct_change=pct_change,
             amount=None,
-            trade_date=None,
+            trade_date=trade_date,
+        )
+
+    def eastmoney_margin_summary(self) -> MarginSnapshot:
+        url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+        data = self.http.get_json(
+            url,
+            params={
+                "reportName": "RPTA_RZRQ_LSHJ",
+                "columns": "ALL",
+                "source": "WEB",
+                "sortColumns": "DIM_DATE",
+                "sortTypes": "-1",
+                "pageNumber": "1",
+                "pageSize": "1",
+            },
+            headers={
+                "Connection": "close",
+                "Referer": "https://data.eastmoney.com/rzrq/total.html",
+            },
+        )
+        rows = (data.get("result") or {}).get("data") or []
+        if not rows:
+            raise ValueError("Eastmoney margin summary is empty")
+        row = rows[0]
+        trade_date = str(row.get("DIM_DATE") or "").split(" ")[0] or None
+        return MarginSnapshot(
+            source="东方财富融资融券",
+            trade_date=trade_date,
+            rzrq_balance=safe_float(row.get("RZRQYE")),
+            rzrq_balance_change=safe_float(row.get("RZRQYECZ")),
+            financing_net_buy=safe_float(row.get("RZJME")),
+            short_net_sell=safe_float(row.get("RQJMG")),
+            rz_balance=safe_float(row.get("RZYE")),
+            rq_balance=safe_float(row.get("RQYE")),
         )
 
     def _eastmoney_clist(self, fs: str, fields: str, page_size: int) -> list[dict]:
@@ -752,3 +783,10 @@ def _safe_int(value) -> int | None:
     if number is None:
         return None
     return int(number)
+
+
+def _timestamp_to_cn_date(value) -> str | None:
+    timestamp = safe_float(value)
+    if not timestamp:
+        return None
+    return datetime.fromtimestamp(timestamp, CN_TZ).date().isoformat()

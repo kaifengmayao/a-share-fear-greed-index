@@ -9,6 +9,7 @@ from .models import (
     FactorContribution,
     IndexAllocationScore,
     KLine,
+    MarginSnapshot,
     MarketBreadth,
     QualityStatus,
     Quote,
@@ -85,7 +86,8 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
 
     etfs = _safe_call(providers.eastmoney_etfs, [])
     future_quote = _safe_call(providers.sina_if_main, None)
-    components.append(_institution_component(etfs, future_quote, price_quality))
+    margin = _safe_call(providers.eastmoney_margin_summary, None)
+    components.append(_institution_component(etfs, future_quote, margin, price_quality, run_date))
 
     components.append(_risk_component(klines))
 
@@ -112,7 +114,7 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     label = classify_score(score)
     emotion_map = build_emotion_map(sectors)
     outlook = build_outlook(score, components)
-    institution_view = build_institution_view(etfs, future_quote, price_quality)
+    institution_view = build_institution_view(etfs, future_quote, margin, price_quality, run_date)
     risk_tips = build_risk_tips(score, components, emotion_map, formal)
     factor_contributions = build_factor_contributions(components)
     index_allocation = build_index_allocation(providers)
@@ -445,31 +447,49 @@ def _allocation_signal(score: float) -> str:
 
 
 def build_institution_view(
-    etfs: list[Quote], future_quote: Quote | None, price_quality
+    etfs: list[Quote],
+    future_quote: Quote | None,
+    margin: MarginSnapshot | None,
+    price_quality,
+    run_date,
 ) -> list[str]:
     notes: list[str] = []
-    etf_pct = mean([q.pct_change for q in etfs if q.pct_change is not None])
-    if etf_pct is None:
-        notes.append("ETF资金：未获取到可用宽基ETF行情。")
-    elif etf_pct > 0.6:
-        notes.append("ETF资金：宽基ETF整体走强，机构/被动资金态度偏积极。")
-    elif etf_pct < -0.6:
-        notes.append("ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。")
+    run_date_text = run_date.isoformat()
+    current_etfs = [
+        q for q in etfs if q.trade_date == run_date_text and q.pct_change is not None
+    ]
+    etf_pct = _amount_weighted_pct(current_etfs)
+    if not current_etfs:
+        notes.append("ETF资金：未获取到当日宽基ETF行情，未纳入机构态度评分。")
+    elif etf_pct is not None and etf_pct > 0.6:
+        notes.append(f"ETF资金：当日宽基ETF成交额加权涨幅 {etf_pct:.2f}%，机构/被动资金态度偏积极。")
+    elif etf_pct is not None and etf_pct < -0.6:
+        notes.append(f"ETF资金：当日宽基ETF成交额加权跌幅 {etf_pct:.2f}%，机构/被动资金偏谨慎。")
     else:
-        notes.append("ETF资金：宽基ETF波动不大，机构态度中性。")
+        notes.append(f"ETF资金：当日宽基ETF成交额加权涨跌幅 {etf_pct or 0:.2f}%，机构态度中性。")
 
-    if future_quote and price_quality.value:
+    if future_quote and future_quote.trade_date == run_date_text and price_quality.value:
         basis = future_quote.price - price_quality.value
         if basis > price_quality.value * 0.002:
-            notes.append("股指期货：IF主连相对沪深300升水，期货端偏乐观。")
+            notes.append("股指期货：当日IF主连相对沪深300升水，期货端偏乐观。")
         elif basis < -price_quality.value * 0.002:
-            notes.append("股指期货：IF主连相对沪深300贴水，期货端偏谨慎。")
+            notes.append("股指期货：当日IF主连相对沪深300贴水，期货端偏谨慎。")
         else:
-            notes.append("股指期货：IF主连基差接近中性。")
+            notes.append("股指期货：当日IF主连基差接近中性。")
     else:
-        notes.append("股指期货：期货数据源异常或不足，已降低机构态度权重。")
+        notes.append("股指期货：未获取到当日IF主连或沪深300点位，未纳入机构态度评分。")
 
-    notes.append("融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。")
+    if margin and margin.trade_date == run_date_text:
+        notes.append(
+            f"融资融券：当日两融余额变化 {_money_text(margin.rzrq_balance_change)}，"
+            f"融资净买入 {_money_text(margin.financing_net_buy)}。"
+        )
+    elif margin and margin.trade_date:
+        notes.append(
+            f"融资融券：最新数据日期为 {margin.trade_date}，非当日数据，仅作滞后参考，不纳入当日机构评分。"
+        )
+    else:
+        notes.append("融资融券：未获取到可用数据，不纳入当日机构评分。")
     return notes
 
 
@@ -619,25 +639,55 @@ def _liquidity_component(klines: list[KLine]) -> ComponentScore:
 
 
 def _institution_component(
-    etfs: list[Quote], future_quote: Quote | None, price_quality
+    etfs: list[Quote],
+    future_quote: Quote | None,
+    margin: MarginSnapshot | None,
+    price_quality,
+    run_date,
 ) -> ComponentScore:
     sub_scores: list[float] = []
-    details = {}
-    etf_pct = mean([q.pct_change for q in etfs if q.pct_change is not None])
+    details = {"run_date": run_date.isoformat()}
+    run_date_text = run_date.isoformat()
+    current_etfs = [
+        q for q in etfs if q.trade_date == run_date_text and q.pct_change is not None
+    ]
+    etf_pct = _amount_weighted_pct(current_etfs)
     if etf_pct is not None:
-        sub_scores.append(pct_to_score(etf_pct, scale=1.8))
-        details["etf_avg_pct"] = round(etf_pct, 3)
+        sub_scores.append(pct_to_score(etf_pct, scale=1.5))
+        details["etf_amount_weighted_pct"] = round(etf_pct, 3)
+        details["etf_count"] = len(current_etfs)
+        details["etf_total_amount"] = round(sum(q.amount or 0 for q in current_etfs), 2)
+        details["etf_trade_date"] = run_date_text
+    elif etfs:
+        details["etf_latest_trade_date"] = max((q.trade_date or "") for q in etfs) or None
+        details["etf_stale_or_missing"] = True
 
-    if future_quote and price_quality.value:
+    if future_quote and future_quote.trade_date == run_date_text and price_quality.value:
         basis_pct = (future_quote.price / price_quality.value - 1) * 100
         sub_scores.append(pct_to_score(basis_pct, scale=0.8))
         details["if_basis_pct"] = round(basis_pct, 3)
+        details["if_trade_date"] = future_quote.trade_date
+    elif future_quote:
+        details["if_latest_trade_date"] = future_quote.trade_date
+        details["if_stale_or_missing"] = True
+
+    if margin:
+        details["margin_trade_date"] = margin.trade_date
+        details["margin_rzrq_balance"] = margin.rzrq_balance
+        details["margin_rzrq_balance_change"] = margin.rzrq_balance_change
+        details["margin_financing_net_buy"] = margin.financing_net_buy
+        if margin.trade_date == run_date_text and margin.rzrq_balance:
+            margin_ratio = ((margin.financing_net_buy or 0) / margin.rzrq_balance) * 100
+            sub_scores.append(clamp(50 + margin_ratio * 350))
+            details["margin_financing_net_buy_ratio"] = round(margin_ratio, 4)
+        else:
+            details["margin_stale_or_missing"] = True
 
     if not sub_scores:
-        return _missing("institution", "机构态度", WEIGHTS["institution"], "ETF、股指期货、融资融券均未获取到可用数据。")
+        return _missing("institution", "机构态度", WEIGHTS["institution"], "未获取到当日ETF、股指期货或融资融券数据。")
 
     status = QualityStatus.WARN
-    confidence = 0.65 if len(sub_scores) == 1 else 0.75
+    confidence = 0.6 if len(sub_scores) == 1 else (0.78 if len(sub_scores) == 2 else 0.88)
     return ComponentScore(
         key="institution",
         name="机构态度",
@@ -645,7 +695,7 @@ def _institution_component(
         weight=WEIGHTS["institution"],
         status=status,
         confidence=confidence,
-        message="机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+        message="机构态度仅纳入当日可验证数据；ETF、期货、融资融券任一滞后都会降低权重。",
         details=details,
     )
 
@@ -772,6 +822,35 @@ def _component_score(components: list[ComponentScore], key: str, default: float)
         if component.key == key:
             return component.score
     return default
+
+
+def _amount_weighted_pct(quotes: list[Quote]) -> float | None:
+    weighted_sum = 0.0
+    total_amount = 0.0
+    simple_values = []
+    for quote in quotes:
+        if quote.pct_change is None:
+            continue
+        simple_values.append(quote.pct_change)
+        amount = quote.amount or 0
+        if amount > 0:
+            weighted_sum += quote.pct_change * amount
+            total_amount += amount
+    if total_amount > 0:
+        return weighted_sum / total_amount
+    return statistics.fmean(simple_values) if simple_values else None
+
+
+def _money_text(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    sign = "-" if value < 0 else ""
+    number = abs(value)
+    if number >= 100000000:
+        return f"{sign}{number / 100000000:.2f}亿"
+    if number >= 10000:
+        return f"{sign}{number / 10000:.2f}万"
+    return f"{sign}{number:.0f}"
 
 
 def _component_details(components: list[ComponentScore], key: str) -> dict:
