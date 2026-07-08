@@ -50,6 +50,19 @@ EASTMONEY_CLIST_HOSTS = [
     "push2his.eastmoney.com",
 ]
 
+EASTMONEY_STOCK_GET_BASES = [
+    "http://push2.eastmoney.com",
+    "https://push2.eastmoney.com",
+    "https://82.push2.eastmoney.com",
+    "https://33.push2.eastmoney.com",
+    "https://push2his.eastmoney.com",
+]
+
+EASTMONEY_TOPIC_BASES = [
+    "http://push2ex.eastmoney.com",
+    "https://push2ex.eastmoney.com",
+]
+
 MARKET_BREADTH_INDICES = [
     ("上证市场", "1.000001"),
     ("深证市场", "0.399001"),
@@ -255,14 +268,7 @@ class DataProviders:
         parts: list[dict] = []
         up = down = flat = 0
         for market_name, secid in MARKET_BREADTH_INDICES:
-            url = f"http://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields={fields}"
-            data = self.http.get_json(
-                url,
-                headers={
-                    "Connection": "close",
-                    "Referer": "https://quote.eastmoney.com/",
-                },
-            ).get("data") or {}
+            data = self._eastmoney_stock_get(secid, fields)
             part_up = int(safe_float(data.get("f113")) or 0)
             part_down = int(safe_float(data.get("f114")) or 0)
             part_flat = int(safe_float(data.get("f115")) or 0)
@@ -302,6 +308,27 @@ class DataProviders:
             limit_up_pool_error=limit_stats.get("error"),
             market_parts=parts,
         )
+
+    def _eastmoney_stock_get(self, secid: str, fields: str) -> dict:
+        last_error: Exception | None = None
+        for base_url in EASTMONEY_STOCK_GET_BASES:
+            url = f"{base_url}/api/qt/stock/get?secid={secid}&fields={fields}"
+            try:
+                data = self.http.get_json(
+                    url,
+                    headers={
+                        "Connection": "close",
+                        "Referer": "https://quote.eastmoney.com/",
+                    },
+                ).get("data") or {}
+                if data:
+                    return data
+                last_error = ValueError(f"Eastmoney stock/get empty for {secid} via {base_url}")
+            except Exception as exc:
+                last_error = exc
+        if last_error is not None:
+            raise last_error
+        raise ValueError(f"Eastmoney stock/get failed for {secid}")
 
     def _eastmoney_list_breadth(self) -> MarketBreadth:
         rows = self._eastmoney_clist(
@@ -509,25 +536,33 @@ class DataProviders:
 
     def _eastmoney_topic_payload(self, endpoint: str) -> dict:
         today = date.today().strftime("%Y%m%d")
-        url = (
-            f"http://push2ex.eastmoney.com/{endpoint}"
-            "?ut=7eea3edcaed734bea9cbfc24409ed989"
-            "&dpt=wz.ztzt"
-            f"&Pageindex=0&pagesize=1000&sort=fbt:asc&date={today}"
-        )
-        data = self.http.get_json(
-            url,
-            headers={
-                "Connection": "close",
-                "Referer": "https://quote.eastmoney.com/ztb/",
-            },
-        )
-        if data.get("rc") != 0:
-            raise ValueError(f"{endpoint} rc={data.get('rc')}")
-        payload = data.get("data") or {}
-        if not isinstance(payload, dict):
-            raise ValueError(f"{endpoint} response data is not a dict")
-        return payload
+        last_error: Exception | None = None
+        for base_url in EASTMONEY_TOPIC_BASES:
+            url = (
+                f"{base_url}/{endpoint}"
+                "?ut=7eea3edcaed734bea9cbfc24409ed989"
+                "&dpt=wz.ztzt"
+                f"&Pageindex=0&pagesize=1000&sort=fbt:asc&date={today}"
+            )
+            try:
+                data = self.http.get_json(
+                    url,
+                    headers={
+                        "Connection": "close",
+                        "Referer": "https://quote.eastmoney.com/ztb/",
+                    },
+                )
+                if data.get("rc") != 0:
+                    raise ValueError(f"{endpoint} rc={data.get('rc')}")
+                payload = data.get("data") or {}
+                if not isinstance(payload, dict):
+                    raise ValueError(f"{endpoint} response data is not a dict")
+                return payload
+            except Exception as exc:
+                last_error = exc
+        if last_error is not None:
+            raise last_error
+        raise ValueError(f"{endpoint} failed")
 
     def _topic_pool(self, payload: dict) -> list[dict]:
         pool = payload.get("pool") or []
