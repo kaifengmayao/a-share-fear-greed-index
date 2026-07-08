@@ -32,6 +32,7 @@ jobs:
       - name: Generate and send report
         env:
           AFGI_SEND_ENABLED: "true"
+          AFGI_FORCE_RECALCULATE: "true"
           AFGI_REQUEST_TIMEOUT: "15"
           WECHAT_WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
           WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
