@@ -7,14 +7,14 @@
   "outlook": {
     "up": 23.0,
     "flat": 32.9,
-    "down": 44.0
+    "down": 44.1
   },
   "components": [
     {
       "key": "trend",
       "name": "沪深300趋势",
       "score": 32.2,
-      "weight": 0.2,
+      "weight": 0.1,
       "status": "OK",
       "confidence": 1.0,
       "message": "趋势数据正常。",
@@ -29,7 +29,7 @@
       "key": "liquidity",
       "name": "成交与流动性",
       "score": 46.0,
-      "weight": 0.15,
+      "weight": 0.07,
       "status": "WARN",
       "confidence": 0.8,
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
@@ -42,20 +42,20 @@
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 26.5,
-      "weight": 0.18,
+      "score": 26.3,
+      "weight": 0.13,
       "status": "WARN",
       "confidence": 0.7,
       "message": "市场宽度目前只有东方财富一个来源，可信度降低。",
       "details": {
-        "total": 5596,
-        "up": 1628,
-        "down": 3816,
-        "flat": 152,
+        "total": 5527,
+        "up": 1592,
+        "down": 3790,
+        "flat": 145,
         "limit_up": 47,
         "limit_down": 41,
-        "limit_up_ratio": 0.0084,
-        "limit_down_ratio": 0.0073,
+        "limit_up_ratio": 0.0085,
+        "limit_down_ratio": 0.0074,
         "first_limit_up": 39,
         "second_limit_up": 6,
         "third_or_more_limit_up": 2,
@@ -63,34 +63,49 @@
         "highest_consecutive_limit_up": 7,
         "limit_up_pool_source": "东方财富涨跌停池",
         "limit_up_pool_error": null,
-        "market_parts": [
-          {
-            "market": "上证市场",
-            "name": "上证指数",
-            "secid": "1.000001",
-            "up": 765,
-            "down": 1507,
-            "flat": 72
-          },
-          {
-            "market": "深证市场",
-            "name": "深证成指",
-            "secid": "0.399001",
-            "up": 803,
-            "down": 2051,
-            "flat": 74
-          },
-          {
-            "market": "北证市场",
-            "name": "北证50",
-            "secid": "0.899050",
-            "up": 60,
-            "down": 258,
-            "flat": 6
-          }
-        ],
-        "up_ratio": 0.291,
-        "down_ratio": 0.682
+        "market_parts": [],
+        "up_ratio": 0.288,
+        "down_ratio": 0.686
+      }
+    },
+    {
+      "key": "profit_effect",
+      "name": "全A赚钱效应",
+      "score": 11.8,
+      "weight": 0.17,
+      "status": "WARN",
+      "confidence": 0.82,
+      "message": "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。",
+      "details": {
+        "source": "新浪行情中心全A分页",
+        "total": 5527,
+        "median_pct_change": -1.387,
+        "average_pct_change": -1.422,
+        "up_3_count": 360,
+        "down_3_count": 1609,
+        "up_3_ratio": 0.0651,
+        "down_3_ratio": 0.2911,
+        "csi300_pct_change": -0.768,
+        "relative_gap_vs_csi300": -0.619
+      }
+    },
+    {
+      "key": "loss_intensity",
+      "name": "深跌亏钱效应",
+      "score": 24.8,
+      "weight": 0.13,
+      "status": "WARN",
+      "confidence": 0.82,
+      "message": "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。",
+      "details": {
+        "source": "新浪行情中心全A分页",
+        "total": 5527,
+        "down_3_count": 1609,
+        "down_5_count": 728,
+        "down_7_count": 298,
+        "down_3_ratio": 0.2911,
+        "down_5_ratio": 0.1317,
+        "down_7_ratio": 0.0539
       }
     },
     {
@@ -205,7 +220,7 @@
       "key": "risk",
       "name": "风险波动",
       "score": 39.8,
-      "weight": 0.12,
+      "weight": 0.05,
       "status": "WARN",
       "confidence": 0.8,
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
@@ -218,10 +233,12 @@
   "warnings": [
     "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
     "市场宽度目前只有东方财富一个来源，可信度降低。",
+    "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。",
+    "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。",
     "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。",
     "机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。",
     "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
-    "扩散式恐慌校准：下跌股票占比 68.2%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2，个股、板块、资金与机构态度同步偏弱，最终指数从 30.3 下调至 8.1。"
+    "扩散式恐慌校准：下跌股票占比 68.6%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2，个股、板块、资金与机构态度同步偏弱，最终指数从 24.3 下调至 8.1。"
   ],
   "institution_view": [
     "ETF资金：当日宽基ETF成交额加权涨跌幅 -0.58%，机构态度中性。",
@@ -431,17 +448,17 @@
     ],
     "concentration": 0.497
   },
-  "raw_score": 30.3,
+  "raw_score": 24.3,
   "factor_contributions": [
     {
       "key": "trend",
       "name": "沪深300趋势",
       "score": 32.2,
-      "raw_weight": 0.2,
+      "raw_weight": 0.1,
       "confidence": 1.0,
-      "effective_weight": 0.2486,
-      "contribution": 8.0,
-      "impact_vs_neutral": -4.43,
+      "effective_weight": 0.1257,
+      "contribution": 4.05,
+      "impact_vs_neutral": -2.24,
       "status": "OK",
       "message": "趋势数据正常。"
     },
@@ -449,25 +466,49 @@
       "key": "liquidity",
       "name": "成交与流动性",
       "score": 46.0,
-      "raw_weight": 0.15,
+      "raw_weight": 0.07,
       "confidence": 0.8,
-      "effective_weight": 0.1492,
-      "contribution": 6.86,
-      "impact_vs_neutral": -0.6,
+      "effective_weight": 0.0704,
+      "contribution": 3.24,
+      "impact_vs_neutral": -0.28,
       "status": "WARN",
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
     },
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 26.5,
-      "raw_weight": 0.18,
+      "score": 26.3,
+      "raw_weight": 0.13,
       "confidence": 0.7,
-      "effective_weight": 0.1566,
-      "contribution": 4.15,
-      "impact_vs_neutral": -3.68,
+      "effective_weight": 0.1144,
+      "contribution": 3.01,
+      "impact_vs_neutral": -2.71,
       "status": "WARN",
       "message": "市场宽度目前只有东方财富一个来源，可信度降低。"
+    },
+    {
+      "key": "profit_effect",
+      "name": "全A赚钱效应",
+      "score": 11.8,
+      "raw_weight": 0.17,
+      "confidence": 0.82,
+      "effective_weight": 0.1752,
+      "contribution": 2.07,
+      "impact_vs_neutral": -6.69,
+      "status": "WARN",
+      "message": "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。"
+    },
+    {
+      "key": "loss_intensity",
+      "name": "深跌亏钱效应",
+      "score": 24.8,
+      "raw_weight": 0.13,
+      "confidence": 0.82,
+      "effective_weight": 0.134,
+      "contribution": 3.32,
+      "impact_vs_neutral": -3.38,
+      "status": "WARN",
+      "message": "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。"
     },
     {
       "key": "sector",
@@ -475,9 +516,9 @@
       "score": 36.9,
       "raw_weight": 0.15,
       "confidence": 0.55,
-      "effective_weight": 0.1025,
-      "contribution": 3.78,
-      "impact_vs_neutral": -1.34,
+      "effective_weight": 0.1037,
+      "contribution": 3.83,
+      "impact_vs_neutral": -1.36,
       "status": "WARN",
       "message": "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。"
     },
@@ -487,9 +528,9 @@
       "score": 12.2,
       "raw_weight": 0.2,
       "confidence": 0.9,
-      "effective_weight": 0.2237,
-      "contribution": 2.73,
-      "impact_vs_neutral": -8.46,
+      "effective_weight": 0.2263,
+      "contribution": 2.76,
+      "impact_vs_neutral": -8.55,
       "status": "WARN",
       "message": "机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。"
     },
@@ -497,11 +538,11 @@
       "key": "risk",
       "name": "风险波动",
       "score": 39.8,
-      "raw_weight": 0.12,
+      "raw_weight": 0.05,
       "confidence": 0.8,
-      "effective_weight": 0.1193,
-      "contribution": 4.75,
-      "impact_vs_neutral": -1.22,
+      "effective_weight": 0.0503,
+      "contribution": 2.0,
+      "impact_vs_neutral": -0.51,
       "status": "WARN",
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
     }
@@ -509,11 +550,11 @@
   "score_adjustments": [
     {
       "name": "扩散式恐慌校准",
-      "before": 30.3,
+      "before": 24.3,
       "after": 8.1,
-      "impact": -22.2,
-      "condition": "下跌股票占比 68.2%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2",
-      "message": "扩散式恐慌校准：下跌股票占比 68.2%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2，个股、板块、资金与机构态度同步偏弱，最终指数从 30.3 下调至 8.1。"
+      "impact": -16.2,
+      "condition": "下跌股票占比 68.6%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2",
+      "message": "扩散式恐慌校准：下跌股票占比 68.6%，板块上涨占比 25.0%，主力资金为正板块占比 27.3%，机构 12.2，趋势 32.2，个股、板块、资金与机构态度同步偏弱，最终指数从 24.3 下调至 8.1。"
     }
   ],
   "index_allocation": [
@@ -644,5 +685,6 @@
       "warning": null
     }
   ],
-  "report_schema_version": 20
+  "report_schema_version": 21,
+  "model_version": "2.0"
 }
