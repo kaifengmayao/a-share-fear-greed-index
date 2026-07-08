@@ -2,8 +2,8 @@ name: Daily AFGI Report
 
 on:
   schedule:
-    # 08:45 UTC = 16:45 Asia/Shanghai. A-share close is 15:00.
-    - cron: "45 8 * * 1-5"
+    # 08:30 UTC = 16:30 Asia/Shanghai. Holiday skipping is handled by the trading-day guard below.
+    - cron: "30 8 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Check A-share trading day
+        id: trading_day
+        env:
+          AFGI_REQUEST_TIMEOUT: "15"
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=manual run" >> "$GITHUB_OUTPUT"
+            echo "Manual run, trading-day guard bypassed."
+            exit 0
+          fi
+          python -m afgi.trading_day | tee trading-day-check.txt
+          grep -E '^(should_run|run_date|latest_trade_date|reason)=' trading-day-check.txt >> "$GITHUB_OUTPUT"
+
       - name: Generate and send report
+        if: steps.trading_day.outputs.should_run == 'true'
         env:
           AFGI_SEND_ENABLED: "true"
           AFGI_FORCE_RECALCULATE: "true"
@@ -41,6 +56,7 @@ jobs:
         run: python -m afgi.main
 
       - name: Commit report snapshot
+        if: steps.trading_day.outputs.should_run == 'true'
         run: |
           if [ -z "$(git status --porcelain reports data)" ]; then
             echo "No report or data changes to commit."

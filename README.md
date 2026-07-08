@@ -122,10 +122,12 @@ AFGI_FORCE_RECALCULATE=true
 默认时间：
 
 ```yaml
-cron: "45 8 * * 1-5"
+cron: "30 8 * * 1-5"
 ```
 
-GitHub Actions 使用 UTC 时间，`08:45 UTC` 对应北京时间 `16:45`，已经在 A 股收盘后。工作流也支持手动运行：
+GitHub Actions 使用 UTC 时间，`08:30 UTC` 对应北京时间 `16:30`，已经在 A 股收盘后。
+
+工作流会先执行交易日检查：定时任务只在沪深300最新日线日期等于当天日期时继续生成并推送报告；周末和 A 股节假日会自动跳过。手动运行不会被交易日检查拦截，方便临时补跑：
 
 `Actions -> Daily AFGI Report -> Run workflow`
 
