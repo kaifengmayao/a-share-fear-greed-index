@@ -1,0 +1,324 @@
+{
+  "run_date": "2026-07-08",
+  "score": 18.0,
+  "label": "恐惧",
+  "formal": false,
+  "suggested_position": "20%-40%",
+  "outlook": {
+    "up": 26.1,
+    "flat": 32.7,
+    "down": 41.2
+  },
+  "components": [
+    {
+      "key": "trend",
+      "name": "沪深300趋势",
+      "score": 32.2,
+      "weight": 0.2,
+      "status": "OK",
+      "confidence": 1.0,
+      "message": "趋势数据正常。",
+      "details": {
+        "close": 4755.53,
+        "ma20": 4880.86,
+        "ma60": 4846.42,
+        "pct20": 0.15
+      }
+    },
+    {
+      "key": "liquidity",
+      "name": "成交与流动性",
+      "score": 49.0,
+      "weight": 0.15,
+      "status": "WARN",
+      "confidence": 0.8,
+      "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
+      "details": {
+        "recent_amount": 884835845881.06,
+        "base_amount": 900772443869.33,
+        "ratio": 0.982
+      }
+    },
+    {
+      "key": "breadth",
+      "name": "市场宽度",
+      "score": 50.0,
+      "weight": 0.18,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "市场宽度数据未获取到。",
+      "details": {}
+    },
+    {
+      "key": "sector",
+      "name": "板块强弱",
+      "score": 50.0,
+      "weight": 0.15,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "行业板块数据不足。",
+      "details": {}
+    },
+    {
+      "key": "institution",
+      "name": "机构态度",
+      "score": 15.9,
+      "weight": 0.2,
+      "status": "WARN",
+      "confidence": 0.75,
+      "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+      "details": {
+        "etf_avg_pct": -0.657,
+        "if_basis_pct": -1.841
+      }
+    },
+    {
+      "key": "risk",
+      "name": "风险波动",
+      "score": 39.8,
+      "weight": 0.12,
+      "status": "WARN",
+      "confidence": 0.8,
+      "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+      "details": {
+        "vol20": 1.555,
+        "pct5": -1.18
+      }
+    }
+  ],
+  "warnings": [
+    "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
+    "市场宽度数据未获取到。",
+    "行业板块数据不足。",
+    "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+    "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 32.7 下调至 18.0。"
+  ],
+  "institution_view": [
+    "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
+    "股指期货：IF主连相对沪深300贴水，期货端偏谨慎。",
+    "融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。"
+  ],
+  "risk_tips": [
+    "今日可用数据权重不足70%，指数为试算值，不建议作为正式仓位信号。"
+  ],
+  "emotion_map": {
+    "strong": [],
+    "weak": [],
+    "concentration": 0.0
+  },
+  "raw_score": 32.7,
+  "factor_contributions": [
+    {
+      "key": "trend",
+      "name": "沪深300趋势",
+      "score": 32.2,
+      "raw_weight": 0.2,
+      "confidence": 1.0,
+      "effective_weight": 0.3534,
+      "contribution": 11.38,
+      "impact_vs_neutral": -6.29,
+      "status": "OK",
+      "message": "趋势数据正常。"
+    },
+    {
+      "key": "liquidity",
+      "name": "成交与流动性",
+      "score": 49.0,
+      "raw_weight": 0.15,
+      "confidence": 0.8,
+      "effective_weight": 0.212,
+      "contribution": 10.39,
+      "impact_vs_neutral": -0.21,
+      "status": "WARN",
+      "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
+    },
+    {
+      "key": "breadth",
+      "name": "市场宽度",
+      "score": 50.0,
+      "raw_weight": 0.18,
+      "confidence": 0.0,
+      "effective_weight": 0.0,
+      "contribution": 0.0,
+      "impact_vs_neutral": 0.0,
+      "status": "MISSING",
+      "message": "市场宽度数据未获取到。"
+    },
+    {
+      "key": "sector",
+      "name": "板块强弱",
+      "score": 50.0,
+      "raw_weight": 0.15,
+      "confidence": 0.0,
+      "effective_weight": 0.0,
+      "contribution": 0.0,
+      "impact_vs_neutral": 0.0,
+      "status": "MISSING",
+      "message": "行业板块数据不足。"
+    },
+    {
+      "key": "institution",
+      "name": "机构态度",
+      "score": 15.9,
+      "raw_weight": 0.2,
+      "confidence": 0.75,
+      "effective_weight": 0.265,
+      "contribution": 4.21,
+      "impact_vs_neutral": -9.04,
+      "status": "WARN",
+      "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。"
+    },
+    {
+      "key": "risk",
+      "name": "风险波动",
+      "score": 39.8,
+      "raw_weight": 0.12,
+      "confidence": 0.8,
+      "effective_weight": 0.1696,
+      "contribution": 6.75,
+      "impact_vs_neutral": -1.73,
+      "status": "WARN",
+      "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    }
+  ],
+  "score_adjustments": [
+    {
+      "name": "市场宽度缺失保守校准",
+      "before": 32.7,
+      "after": 18.0,
+      "impact": -14.7,
+      "condition": "市场宽度数据缺失",
+      "message": "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 32.7 下调至 18.0。"
+    }
+  ],
+  "index_allocation": [
+    {
+      "rank": 1,
+      "name": "科创50",
+      "code": "000688",
+      "secid": "1.000688",
+      "score": 100.0,
+      "signal": "优先配置",
+      "expected_20d_return": 8.0,
+      "up_probability": 80,
+      "momentum_20d": 22.03,
+      "momentum_60d": 47.76,
+      "trend_score": 100.0,
+      "volume_ratio_5_20": 0.967,
+      "volatility_20d": 3.049,
+      "max_drawdown_60d": -8.68,
+      "reason": "20日动量 22.03%，60日动量 47.76%，5/20日成交额比 0.97，20日波动 3.05%。",
+      "warning": null
+    },
+    {
+      "rank": 2,
+      "name": "创业板指",
+      "code": "399006",
+      "secid": "0.399006",
+      "score": 56.5,
+      "signal": "适度配置",
+      "expected_20d_return": 1.72,
+      "up_probability": 58.5,
+      "momentum_20d": -0.24,
+      "momentum_60d": 11.5,
+      "trend_score": 85.6,
+      "volume_ratio_5_20": 0.903,
+      "volatility_20d": 2.704,
+      "max_drawdown_60d": -12.05,
+      "reason": "20日动量 -0.24%，60日动量 11.50%，5/20日成交额比 0.90，20日波动 2.70%。",
+      "warning": null
+    },
+    {
+      "rank": 3,
+      "name": "中证500",
+      "code": "000905",
+      "secid": "1.000905",
+      "score": 55.3,
+      "signal": "观察等待",
+      "expected_20d_return": 1.86,
+      "up_probability": 58.8,
+      "momentum_20d": 4.04,
+      "momentum_60d": 5.28,
+      "trend_score": 72.2,
+      "volume_ratio_5_20": 0.93,
+      "volatility_20d": 1.839,
+      "max_drawdown_60d": -7.1,
+      "reason": "20日动量 4.04%，60日动量 5.28%，5/20日成交额比 0.93，20日波动 1.84%。",
+      "warning": null
+    },
+    {
+      "rank": 4,
+      "name": "深证成指",
+      "code": "399001",
+      "secid": "0.399001",
+      "score": 44.8,
+      "signal": "低配回避",
+      "expected_20d_return": 0.3,
+      "up_probability": 49.9,
+      "momentum_20d": -0.1,
+      "momentum_60d": 4.4,
+      "trend_score": 61.5,
+      "volume_ratio_5_20": 0.946,
+      "volatility_20d": 2.029,
+      "max_drawdown_60d": -8.75,
+      "reason": "20日动量 -0.10%，60日动量 4.40%，5/20日成交额比 0.95，20日波动 2.03%。",
+      "warning": null
+    },
+    {
+      "rank": 5,
+      "name": "上证50",
+      "code": "000016",
+      "secid": "1.000016",
+      "score": 44.6,
+      "signal": "低配回避",
+      "expected_20d_return": 0.27,
+      "up_probability": 49.7,
+      "momentum_20d": 2.47,
+      "momentum_60d": 0.73,
+      "trend_score": 53.8,
+      "volume_ratio_5_20": 0.898,
+      "volatility_20d": 1.53,
+      "max_drawdown_60d": -4.15,
+      "reason": "20日动量 2.47%，60日动量 0.73%，5/20日成交额比 0.90，20日波动 1.53%。",
+      "warning": null
+    },
+    {
+      "rank": 6,
+      "name": "沪深300",
+      "code": "000300",
+      "secid": "1.000300",
+      "score": 44.1,
+      "signal": "低配回避",
+      "expected_20d_return": -0.02,
+      "up_probability": 48.4,
+      "momentum_20d": 0.15,
+      "momentum_60d": 2.57,
+      "trend_score": 56.0,
+      "volume_ratio_5_20": 0.909,
+      "volatility_20d": 1.555,
+      "max_drawdown_60d": -6.01,
+      "reason": "20日动量 0.15%，60日动量 2.57%，5/20日成交额比 0.91，20日波动 1.55%。",
+      "warning": null
+    },
+    {
+      "rank": 7,
+      "name": "中证1000",
+      "code": "000852",
+      "secid": "1.000852",
+      "score": 38.6,
+      "signal": "低配回避",
+      "expected_20d_return": -0.43,
+      "up_probability": 45.4,
+      "momentum_20d": -0.99,
+      "momentum_60d": 1.5,
+      "trend_score": 53.7,
+      "volume_ratio_5_20": 0.913,
+      "volatility_20d": 1.748,
+      "max_drawdown_60d": -9.35,
+      "reason": "20日动量 -0.99%，60日动量 1.50%，5/20日成交额比 0.91，20日波动 1.75%。",
+      "warning": null
+    }
+  ],
+  "report_schema_version": 13
+}
