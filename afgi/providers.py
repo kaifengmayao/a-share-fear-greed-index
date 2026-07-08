@@ -493,12 +493,7 @@ class DataProviders:
             return cached
         errors: list[str] = []
         for source, fetch in (
-            ("东方财富全A分页", lambda: self._cached_eastmoney_clist(
-                "profit:all_a",
-                "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
-                fields="f12,f14,f2,f3,f6",
-                page_size=6000,
-            )),
+            ("东方财富全A分页", self._eastmoney_profit_rows_fast),
             ("新浪行情中心全A分页", self._sina_market_center_rows),
         ):
             try:
@@ -553,6 +548,18 @@ class DataProviders:
                 f"{effect.source} returned only {effect.total} stocks; "
                 f"expected at least {MIN_MARKET_BREADTH_TOTAL}"
             )
+
+    def _eastmoney_profit_rows_fast(self) -> list[dict]:
+        cached = self._cache.get("eastmoney_profit_rows_fast")
+        if isinstance(cached, list):
+            return cached
+        rows = self._eastmoney_clist_fast(
+            "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+            fields="f12,f14,f2,f3,f6",
+            page_size=6000,
+        )
+        self._cache["eastmoney_profit_rows_fast"] = rows
+        return rows
 
     def _sina_market_center_rows(self) -> list[dict]:
         cached = self._cache.get("sina_market_center_rows")
@@ -880,6 +887,52 @@ class DataProviders:
         rows = self._eastmoney_clist(fs, fields, page_size)
         self._cache[key] = rows
         return rows
+
+    def _eastmoney_clist_fast(self, fs: str, fields: str, page_size: int) -> list[dict]:
+        rows: list[dict] = []
+        page = 1
+        per_page = min(max(page_size, 1), 100)
+        total = page_size
+        while len(rows) < min(page_size, total):
+            try:
+                data = self._eastmoney_clist_page_fast(fs, fields, page, per_page)
+            except Exception:
+                if rows:
+                    break
+                raise
+            total = int(data.get("total") or total)
+            diff = data.get("diff") or []
+            if not diff:
+                break
+            rows.extend(diff)
+            page += 1
+            time.sleep(0.05)
+        return rows[:page_size]
+
+    def _eastmoney_clist_page_fast(
+        self, fs: str, fields: str, page: int, per_page: int
+    ) -> dict:
+        last_error: Exception | None = None
+        for host in EASTMONEY_CLIST_HOSTS[:2]:
+            url = (
+                f"https://{host}/api/qt/clist/get"
+                f"?pn={page}&pz={per_page}&po=1&np=1&fltt=2&invt=2"
+                f"&fs={fs}&fields={fields}"
+            )
+            try:
+                return self.http.get_json(
+                    url,
+                    timeout=4,
+                    headers={
+                        "Connection": "close",
+                        "Referer": "https://quote.eastmoney.com/",
+                    },
+                ).get("data") or {}
+            except Exception as exc:
+                last_error = exc
+        if last_error is not None:
+            raise last_error
+        return {}
 
     def _eastmoney_clist_page(
         self, fs: str, fields: str, page: int, per_page: int

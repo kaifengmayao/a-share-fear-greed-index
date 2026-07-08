@@ -20,12 +20,14 @@ class HttpClient:
         self.session.headers.update(DEFAULT_HEADERS)
 
     def get_json(self, url: str, **kwargs):
-        response = self.session.get(url, timeout=self.timeout, **kwargs)
+        timeout = kwargs.pop("timeout", self.timeout)
+        response = self.session.get(url, timeout=timeout, **kwargs)
         response.raise_for_status()
         return response.json()
 
     def get_text(self, url: str, **kwargs) -> str:
-        response = self.session.get(url, timeout=self.timeout, **kwargs)
+        timeout = kwargs.pop("timeout", self.timeout)
+        response = self.session.get(url, timeout=timeout, **kwargs)
         response.raise_for_status()
         response.encoding = response.apparent_encoding or response.encoding
         return response.text
