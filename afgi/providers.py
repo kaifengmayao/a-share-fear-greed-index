@@ -4,11 +4,12 @@ import json
 from datetime import date
 from datetime import datetime
 import re
+import statistics
 import time
 from typing import Callable
 
 from .http_client import HttpClient
-from .models import KLine, MarginSnapshot, MarketBreadth, Quote, SectorSnapshot
+from .models import KLine, MarginSnapshot, MarketBreadth, MarketProfitEffect, Quote, SectorSnapshot
 from .utils import CN_TZ, safe_float
 
 
@@ -392,7 +393,8 @@ class DataProviders:
         raise ValueError("Eastmoney list breadth unavailable: " + " | ".join(errors))
 
     def _eastmoney_list_breadth_for(self, source: str, fs: str) -> MarketBreadth:
-        rows = self._eastmoney_clist(
+        rows = self._cached_eastmoney_clist(
+            f"breadth:{source}",
             fs,
             fields="f12,f14,f2,f3,f6",
             page_size=6000,
@@ -448,33 +450,7 @@ class DataProviders:
             )
 
     def _sina_market_center_breadth(self) -> MarketBreadth:
-        rows: list[dict] = []
-        per_page = 80
-        for page in range(1, 90):
-            text = self.http.get_text(
-                SINA_MARKET_CENTER_URL,
-                params={
-                    "page": page,
-                    "num": per_page,
-                    "sort": "changepercent",
-                    "asc": "0",
-                    "node": "hs_a",
-                    "symbol": "",
-                    "_s_r_a": "page",
-                },
-                headers={
-                    "Connection": "close",
-                    "Referer": "https://vip.stock.finance.sina.com.cn/mkt/",
-                },
-            )
-            page_rows = _parse_sina_market_center_rows(text)
-            if not page_rows:
-                break
-            rows.extend(page_rows)
-            if len(page_rows) < per_page:
-                break
-            time.sleep(0.12)
-
+        rows = self._sina_market_center_rows()
         changes = [safe_float(row.get("changepercent")) for row in rows]
         changes = [item for item in changes if item is not None]
         if not changes:
@@ -510,6 +486,106 @@ class DataProviders:
             limit_up_pool_source=limit_stats.get("source"),
             limit_up_pool_error=limit_stats.get("error"),
         )
+
+    def market_profit_effect(self, csi300_pct_change: float | None = None) -> MarketProfitEffect:
+        cached = self._cache.get("market_profit_effect")
+        if isinstance(cached, MarketProfitEffect):
+            return cached
+        errors: list[str] = []
+        for source, fetch in (
+            ("东方财富全A分页", lambda: self._cached_eastmoney_clist(
+                "profit:all_a",
+                "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+                fields="f12,f14,f2,f3,f6",
+                page_size=6000,
+            )),
+            ("新浪行情中心全A分页", self._sina_market_center_rows),
+        ):
+            try:
+                rows = fetch()
+                effect = self._market_profit_effect_from_rows(source, rows, csi300_pct_change)
+                self._validate_profit_effect(effect)
+                self._cache["market_profit_effect"] = effect
+                return effect
+            except Exception as exc:
+                errors.append(f"{source}: {exc}")
+        raise ValueError("Market profit effect unavailable: " + " | ".join(errors))
+
+    def _market_profit_effect_from_rows(
+        self, source: str, rows: list[dict], csi300_pct_change: float | None
+    ) -> MarketProfitEffect:
+        change_keys = ("changepercent", "f3")
+        changes: list[float] = []
+        for row in rows:
+            value = None
+            for key in change_keys:
+                value = safe_float(row.get(key))
+                if value is not None:
+                    break
+            if value is not None:
+                changes.append(value)
+        if not changes:
+            raise ValueError(f"{source} profit effect has no pct changes")
+        total = len(changes)
+        up_3 = sum(1 for value in changes if value >= 3)
+        down_3 = sum(1 for value in changes if value <= -3)
+        down_5 = sum(1 for value in changes if value <= -5)
+        down_7 = sum(1 for value in changes if value <= -7)
+        return MarketProfitEffect(
+            source=source,
+            total=total,
+            median_pct_change=statistics.median(changes),
+            average_pct_change=statistics.fmean(changes),
+            up_3_count=up_3,
+            down_3_count=down_3,
+            down_5_count=down_5,
+            down_7_count=down_7,
+            up_3_ratio=up_3 / total,
+            down_3_ratio=down_3 / total,
+            down_5_ratio=down_5 / total,
+            down_7_ratio=down_7 / total,
+            csi300_pct_change=csi300_pct_change,
+        )
+
+    def _validate_profit_effect(self, effect: MarketProfitEffect) -> None:
+        if effect.total < MIN_MARKET_BREADTH_TOTAL:
+            raise ValueError(
+                f"{effect.source} returned only {effect.total} stocks; "
+                f"expected at least {MIN_MARKET_BREADTH_TOTAL}"
+            )
+
+    def _sina_market_center_rows(self) -> list[dict]:
+        cached = self._cache.get("sina_market_center_rows")
+        if isinstance(cached, list):
+            return cached
+        rows: list[dict] = []
+        per_page = 80
+        for page in range(1, 90):
+            text = self.http.get_text(
+                SINA_MARKET_CENTER_URL,
+                params={
+                    "page": page,
+                    "num": per_page,
+                    "sort": "changepercent",
+                    "asc": "0",
+                    "node": "hs_a",
+                    "symbol": "",
+                    "_s_r_a": "page",
+                },
+                headers={
+                    "Connection": "close",
+                    "Referer": "https://vip.stock.finance.sina.com.cn/mkt/",
+                },
+            )
+            page_rows = _parse_sina_market_center_rows(text)
+            if not page_rows:
+                break
+            rows.extend(page_rows)
+            if len(page_rows) < per_page:
+                break
+            time.sleep(0.12)
+        self._cache["sina_market_center_rows"] = rows
+        return rows
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
         try:
@@ -793,6 +869,17 @@ class DataProviders:
             page += 1
             time.sleep(0.15)
         return rows[:page_size]
+
+    def _cached_eastmoney_clist(
+        self, cache_key: str, fs: str, fields: str, page_size: int
+    ) -> list[dict]:
+        key = f"eastmoney_clist:{cache_key}"
+        cached = self._cache.get(key)
+        if isinstance(cached, list):
+            return cached
+        rows = self._eastmoney_clist(fs, fields, page_size)
+        self._cache[key] = rows
+        return rows
 
     def _eastmoney_clist_page(
         self, fs: str, fields: str, page: int, per_page: int

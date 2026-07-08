@@ -11,6 +11,7 @@ from .models import (
     KLine,
     MarginSnapshot,
     MarketBreadth,
+    MarketProfitEffect,
     QualityStatus,
     Quote,
     ScoreAdjustment,
@@ -28,11 +29,13 @@ from .utils import clamp, mean, pct_to_score, today_cn
 
 
 WEIGHTS = {
-    "trend": 0.20,
-    "breadth": 0.18,
-    "liquidity": 0.15,
+    "trend": 0.10,
+    "breadth": 0.13,
+    "profit_effect": 0.17,
+    "loss_intensity": 0.13,
+    "liquidity": 0.07,
     "institution": 0.20,
-    "risk": 0.12,
+    "risk": 0.05,
     "sector": 0.15,
 }
 
@@ -85,6 +88,9 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
 
     breadth = _safe_call(providers.eastmoney_breadth, None)
     components.append(_breadth_component(breadth))
+    profit_effect = _safe_call(lambda: providers.market_profit_effect(pct_quality.value), None)
+    components.append(_profit_effect_component(profit_effect))
+    components.append(_loss_intensity_component(profit_effect))
 
     sectors = _safe_call(providers.eastmoney_sectors, [])
     components.append(_sector_component(sectors))
@@ -650,6 +656,102 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
             "market_parts": breadth.market_parts,
             "up_ratio": round(up_ratio, 3),
             "down_ratio": round(down_ratio, 3),
+        },
+    )
+
+
+def _profit_effect_component(effect: MarketProfitEffect | None) -> ComponentScore:
+    if not effect:
+        return _missing(
+            "profit_effect",
+            "全A赚钱效应",
+            WEIGHTS["profit_effect"],
+            "全A涨跌幅分布未获取到，赚钱效应模块缺失。",
+        )
+    if effect.total < MIN_MARKET_BREADTH_TOTAL:
+        return _missing(
+            "profit_effect",
+            "全A赚钱效应",
+            WEIGHTS["profit_effect"],
+            f"全A涨跌幅样本不足：仅 {effect.total} 家，低于 {MIN_MARKET_BREADTH_TOTAL} 家最低覆盖要求。",
+        )
+    relative_gap = None
+    if effect.csi300_pct_change is not None:
+        relative_gap = effect.median_pct_change - effect.csi300_pct_change
+    score = (
+        50
+        + effect.median_pct_change * 15
+        + (effect.up_3_ratio - effect.down_3_ratio) * 55
+        + (relative_gap or 0) * 8
+    )
+    message = "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。"
+    if effect.median_pct_change <= -2 or effect.down_3_ratio >= 0.30:
+        message = "全A中位数跌幅较深或大跌股票占比较高，真实赚钱效应显著偏弱。"
+    elif effect.median_pct_change >= 1 and effect.up_3_ratio > effect.down_3_ratio:
+        message = "全A中位数上涨且强势股扩散，真实赚钱效应偏强。"
+    return ComponentScore(
+        key="profit_effect",
+        name="全A赚钱效应",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["profit_effect"],
+        status=QualityStatus.WARN,
+        confidence=0.82,
+        message=message,
+        details={
+            "source": effect.source,
+            "total": effect.total,
+            "median_pct_change": round(effect.median_pct_change, 3),
+            "average_pct_change": round(effect.average_pct_change, 3),
+            "up_3_count": effect.up_3_count,
+            "down_3_count": effect.down_3_count,
+            "up_3_ratio": round(effect.up_3_ratio, 4),
+            "down_3_ratio": round(effect.down_3_ratio, 4),
+            "csi300_pct_change": None
+            if effect.csi300_pct_change is None
+            else round(effect.csi300_pct_change, 3),
+            "relative_gap_vs_csi300": None if relative_gap is None else round(relative_gap, 3),
+        },
+    )
+
+
+def _loss_intensity_component(effect: MarketProfitEffect | None) -> ComponentScore:
+    if not effect:
+        return _missing(
+            "loss_intensity",
+            "深跌亏钱效应",
+            WEIGHTS["loss_intensity"],
+            "全A深跌分布未获取到，亏钱效应模块缺失。",
+        )
+    if effect.total < MIN_MARKET_BREADTH_TOTAL:
+        return _missing(
+            "loss_intensity",
+            "深跌亏钱效应",
+            WEIGHTS["loss_intensity"],
+            f"全A深跌样本不足：仅 {effect.total} 家，低于 {MIN_MARKET_BREADTH_TOTAL} 家最低覆盖要求。",
+        )
+    score = 100 - effect.down_3_ratio * 95 - effect.down_5_ratio * 230 - effect.down_7_ratio * 320
+    message = "跌超3%、5%、7%的股票占比用于衡量亏钱效应和杀跌强度。"
+    if effect.down_5_ratio >= 0.10 or effect.down_7_ratio >= 0.035:
+        message = "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。"
+    elif effect.down_3_ratio >= 0.25:
+        message = "跌超3%的股票占比较高，亏钱效应明显扩散。"
+    return ComponentScore(
+        key="loss_intensity",
+        name="深跌亏钱效应",
+        score=round(clamp(score), 1),
+        weight=WEIGHTS["loss_intensity"],
+        status=QualityStatus.WARN,
+        confidence=0.82,
+        message=message,
+        details={
+            "source": effect.source,
+            "total": effect.total,
+            "down_3_count": effect.down_3_count,
+            "down_5_count": effect.down_5_count,
+            "down_7_count": effect.down_7_count,
+            "down_3_ratio": round(effect.down_3_ratio, 4),
+            "down_5_ratio": round(effect.down_5_ratio, 4),
+            "down_7_ratio": round(effect.down_7_ratio, 4),
         },
     )
 

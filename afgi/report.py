@@ -15,7 +15,8 @@ from .models import (
 )
 
 
-REPORT_SCHEMA_VERSION = 20
+REPORT_SCHEMA_VERSION = 21
+MODEL_VERSION = "2.0"
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -25,8 +26,9 @@ def render_markdown(result: AfgiResult) -> str:
         title_prefix += "（试算）"
 
     lines = [
-        f"# {title_prefix}",
+        f"# {title_prefix} {MODEL_VERSION}",
         "",
+        f"- 模型版本：{MODEL_VERSION}",
         f"- 日期：{result.run_date.isoformat()}",
         f"- 指数：{score_text} / 100",
         f"- 加权原始分：{'N/A' if result.raw_score is None else f'{result.raw_score:.1f}'} / 100",
@@ -112,6 +114,10 @@ def render_markdown(result: AfgiResult) -> str:
     if breadth_lines:
         lines.extend(["", "## 市场宽度明细", ""])
         lines.extend(breadth_lines)
+    profit_lines = _profit_effect_detail_lines(result.components)
+    if profit_lines:
+        lines.extend(["", "## 赚钱效应与深跌明细", ""])
+        lines.extend(profit_lines)
 
     return "\n".join(lines) + "\n"
 
@@ -124,7 +130,8 @@ def render_wechat_markdown(result: AfgiResult) -> str:
     weak = result.emotion_map.get("weak", [])[:5]
 
     lines = [
-        f"## A股恐惧贪婪指数{formal_note}",
+        f"## A股恐惧贪婪指数 {MODEL_VERSION}{formal_note}",
+        f"> 模型版本：{MODEL_VERSION}",
         f"> 日期：{result.run_date.isoformat()}",
         f"> 指数：<font color=\"warning\">{score_text}</font> / 100",
         f"> 加权原始分：{'N/A' if result.raw_score is None else f'{result.raw_score:.1f}'} / 100",
@@ -145,7 +152,7 @@ def render_wechat_markdown(result: AfgiResult) -> str:
 
     if result.factor_contributions:
         lines.extend(["", "### 因子贡献拆解"])
-        for item in result.factor_contributions[:4]:
+        for item in result.factor_contributions[:6]:
             lines.append(
                 f"- {item.name}：贡献 {item.contribution:.2f} 分，"
                 f"相对中性 {item.impact_vs_neutral:+.2f}"
@@ -160,6 +167,10 @@ def render_wechat_markdown(result: AfgiResult) -> str:
     if breadth_lines:
         lines.extend(["", "### 市场宽度明细"])
         lines.extend(breadth_lines[:5])
+    profit_lines = _profit_effect_detail_lines(result.components)
+    if profit_lines:
+        lines.extend(["", "### 赚钱效应与深跌"])
+        lines.extend(profit_lines[:4])
 
     lines.extend(["", "### 数据质量提示"])
     lines.extend([f"- {item}" for item in warnings])
@@ -234,12 +245,59 @@ def _breadth_detail_lines(components: list[ComponentScore]) -> list[str]:
     return lines
 
 
+def _profit_effect_detail_lines(components: list[ComponentScore]) -> list[str]:
+    profit = next((item for item in components if item.key == "profit_effect"), None)
+    loss = next((item for item in components if item.key == "loss_intensity"), None)
+    lines: list[str] = []
+    if profit and profit.details:
+        details = profit.details
+        total = details.get("total")
+        source = details.get("source") or "未知来源"
+        median = _fmt_pct_number(details.get("median_pct_change"))
+        average = _fmt_pct_number(details.get("average_pct_change"))
+        up_3_ratio = _pct_from_ratio(details.get("up_3_ratio"))
+        down_3_ratio = _pct_from_ratio(details.get("down_3_ratio"))
+        gap = details.get("relative_gap_vs_csi300")
+        gap_text = "" if gap is None else f"，较沪深300 {float(gap):+.2f} 个百分点"
+        lines.append(
+            f"- 全A赚钱效应：样本 {total} 家，来源 {source}，"
+            f"中位数涨跌幅 {median}，平均 {average}{gap_text}。"
+        )
+        lines.append(
+            f"- 强弱分布：涨超3% {details.get('up_3_count')} 家（{up_3_ratio}），"
+            f"跌超3% {details.get('down_3_count')} 家（{down_3_ratio}）。"
+        )
+    if loss and loss.details:
+        details = loss.details
+        down_5_ratio = _pct_from_ratio(details.get("down_5_ratio"))
+        down_7_ratio = _pct_from_ratio(details.get("down_7_ratio"))
+        lines.append(
+            f"- 深跌亏钱效应：跌超5% {details.get('down_5_count')} 家（{down_5_ratio}），"
+            f"跌超7% {details.get('down_7_count')} 家（{down_7_ratio}）。"
+        )
+    return lines
+
+
 def _pct(value: object, total: object) -> str:
     try:
         denominator = float(total)
         if denominator <= 0:
             return "N/A"
         return f"{float(value) / denominator:.1%}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _pct_from_ratio(value: object) -> str:
+    try:
+        return f"{float(value) * 100:.1f}%"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _fmt_pct_number(value: object) -> str:
+    try:
+        return f"{float(value):.2f}%"
     except (TypeError, ValueError):
         return "N/A"
 
@@ -268,6 +326,7 @@ def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:
     latest_path.write_text(markdown, encoding="utf-8")
     payload = asdict(result)
     payload["report_schema_version"] = REPORT_SCHEMA_VERSION
+    payload["model_version"] = MODEL_VERSION
     json_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",

@@ -102,6 +102,23 @@ class MarketBreadth:
 
 
 @dataclass(frozen=True)
+class MarketProfitEffect:
+    source: str
+    total: int
+    median_pct_change: float
+    average_pct_change: float
+    up_3_count: int
+    down_3_count: int
+    down_5_count: int
+    down_7_count: int
+    up_3_ratio: float
+    down_3_ratio: float
+    down_5_ratio: float
+    down_7_ratio: float
+    csi300_pct_change: float | None = None
+
+
+@dataclass(frozen=True)
 class ComponentScore:
     key: str
     name: str
