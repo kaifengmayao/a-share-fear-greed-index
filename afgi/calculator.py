@@ -456,18 +456,23 @@ def build_risk_tips(
 
 
 def build_emotion_map(sectors: list[SectorSnapshot]) -> dict:
-    ranked = sorted(sectors, key=lambda item: item.pct_change, reverse=True)
+    max_abs_flow = max((abs(item.main_net_inflow or 0) for item in sectors), default=0) or 1
+    ranked = sorted(
+        sectors,
+        key=lambda item: _sector_strength_score(item, max_abs_flow),
+        reverse=True,
+    )
     top = ranked[:8]
     bottom = ranked[-8:][::-1]
     abs_sum = sum(abs(item.pct_change) for item in ranked[:20]) or 1
     concentration = sum(abs(item.pct_change) for item in ranked[:5]) / abs_sum
     return {
         "strong": [
-            {"name": item.name, "pct_change": round(item.pct_change, 2), "amount": item.amount}
+            _sector_map_item(item, max_abs_flow)
             for item in top
         ],
         "weak": [
-            {"name": item.name, "pct_change": round(item.pct_change, 2), "amount": item.amount}
+            _sector_map_item(item, max_abs_flow)
             for item in bottom
         ],
         "concentration": round(concentration, 3),
@@ -625,21 +630,86 @@ def _risk_component(klines: list[KLine]) -> ComponentScore:
 def _sector_component(sectors: list[SectorSnapshot]) -> ComponentScore:
     if len(sectors) < 10:
         return _missing("sector", "板块强弱", WEIGHTS["sector"], "行业板块数据不足。")
-    ranked = sorted(sectors, key=lambda item: item.pct_change, reverse=True)
+    max_abs_flow = max((abs(item.main_net_inflow or 0) for item in sectors), default=0) or 1
+    ranked = sorted(
+        sectors,
+        key=lambda item: _sector_strength_score(item, max_abs_flow),
+        reverse=True,
+    )
     top_mean = statistics.fmean([item.pct_change for item in ranked[:8]])
     bottom_mean = statistics.fmean([item.pct_change for item in ranked[-8:]])
     breadth = sum(1 for item in sectors if item.pct_change > 0) / len(sectors)
-    score = 50 + top_mean * 6 + bottom_mean * 2 + (breadth - 0.5) * 45
+    fund_positive_ratio = (
+        sum(1 for item in sectors if (item.main_net_inflow or 0) > 0) / len(sectors)
+    )
+    internal_up_ratios = []
+    for item in sectors:
+        total = (item.up or 0) + (item.down or 0) + (item.flat or 0)
+        if total > 0 and item.up is not None:
+            internal_up_ratios.append(item.up / total)
+    internal_up_ratio = statistics.fmean(internal_up_ratios) if internal_up_ratios else None
+    internal_boost = 0 if internal_up_ratio is None else (internal_up_ratio - 0.5) * 20
+    source = sectors[0].source or "未知来源"
+    degraded = "降级" in source
+    score = (
+        50
+        + top_mean * 5
+        + bottom_mean * 2
+        + (breadth - 0.5) * 35
+        + (fund_positive_ratio - 0.5) * 18
+        + internal_boost
+    )
     return ComponentScore(
         key="sector",
         name="板块强弱",
         score=round(clamp(score), 1),
         weight=WEIGHTS["sector"],
         status=QualityStatus.WARN,
-        confidence=0.7,
-        message="板块强弱目前只有东方财富一个来源，情绪地图需结合人工复核。",
-        details={"top_mean": round(top_mean, 3), "bottom_mean": round(bottom_mean, 3), "sector_up_ratio": round(breadth, 3)},
+        confidence=0.55 if degraded else 0.7,
+        message=(
+            "板块强弱使用东方财富板块资金流降级数据，板块内部涨跌家数未补齐，已降低权重。"
+            if degraded
+            else "板块强弱基于东方财富板块资金流与板块指数行情，仍为单平台来源，需结合人工复核。"
+        ),
+        details={
+            "source": source,
+            "sector_count": len(sectors),
+            "top_mean": round(top_mean, 3),
+            "bottom_mean": round(bottom_mean, 3),
+            "sector_up_ratio": round(breadth, 3),
+            "fund_positive_ratio": round(fund_positive_ratio, 3),
+            "internal_up_ratio": None
+            if internal_up_ratio is None
+            else round(internal_up_ratio, 3),
+            "top_by_strength": [
+                _sector_map_item(item, max_abs_flow) for item in ranked[:5]
+            ],
+        },
     )
+
+
+def _sector_strength_score(item: SectorSnapshot, max_abs_flow: float) -> float:
+    flow_score = ((item.main_net_inflow or 0) / max_abs_flow) * 3
+    internal_score = 0.0
+    total = (item.up or 0) + (item.down or 0) + (item.flat or 0)
+    if total > 0 and item.up is not None:
+        internal_score = (item.up / total - 0.5) * 4
+    return item.pct_change + flow_score + internal_score
+
+
+def _sector_map_item(item: SectorSnapshot, max_abs_flow: float) -> dict:
+    return {
+        "name": item.name,
+        "code": item.code,
+        "pct_change": round(item.pct_change, 2),
+        "amount": item.amount,
+        "main_net_inflow": item.main_net_inflow,
+        "main_net_inflow_ratio": item.main_net_inflow_ratio,
+        "up": item.up,
+        "down": item.down,
+        "flat": item.flat,
+        "strength": round(_sector_strength_score(item, max_abs_flow), 3),
+    }
 
 
 def _missing(key: str, name: str, weight: float, message: str) -> ComponentScore:

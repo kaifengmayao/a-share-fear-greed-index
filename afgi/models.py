@@ -61,6 +61,12 @@ class SectorSnapshot:
     name: str
     pct_change: float
     amount: float | None
+    main_net_inflow: float | None = None
+    main_net_inflow_ratio: float | None = None
+    up: int | None = None
+    down: int | None = None
+    flat: int | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True)

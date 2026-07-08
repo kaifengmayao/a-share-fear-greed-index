@@ -15,7 +15,7 @@ from .models import (
 )
 
 
-REPORT_SCHEMA_VERSION = 14
+REPORT_SCHEMA_VERSION = 15
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -96,11 +96,11 @@ def render_markdown(result: AfgiResult) -> str:
     weak = result.emotion_map.get("weak", [])[:6]
     if strong:
         lines.append("强势吸金/领涨板块：")
-        lines.extend([f"- {item['name']}：{item['pct_change']}%" for item in strong])
+        lines.extend([_sector_line(item) for item in strong])
     if weak:
         lines.append("")
         lines.append("弱势退潮板块：")
-        lines.extend([f"- {item['name']}：{item['pct_change']}%" for item in weak])
+        lines.extend([_sector_line(item) for item in weak])
 
     lines.extend(["", "## 分项指标", ""])
     for component in result.components:
@@ -169,11 +169,26 @@ def render_wechat_markdown(result: AfgiResult) -> str:
     lines.extend([f"- {item}" for item in result.risk_tips[:3]])
     if strong:
         lines.extend(["", "### 情绪地图：强势板块"])
-        lines.extend([f"- {item['name']}：{item['pct_change']}%" for item in strong])
+        lines.extend([_sector_line(item) for item in strong])
     if weak:
         lines.extend(["", "### 弱势板块"])
-        lines.extend([f"- {item['name']}：{item['pct_change']}%" for item in weak])
+        lines.extend([_sector_line(item) for item in weak])
     return "\n".join(lines)
+
+
+def _sector_line(item: dict) -> str:
+    flow = _money(item.get("main_net_inflow"))
+    ratio = item.get("main_net_inflow_ratio")
+    ratio_text = "" if ratio is None else f"，主力净占比 {float(ratio):.2f}%"
+    up = item.get("up")
+    down = item.get("down")
+    breadth_text = ""
+    if up is not None and down is not None:
+        breadth_text = f"，板块内上涨 {up} / 下跌 {down}"
+    return (
+        f"- {item['name']}：涨跌幅 {item['pct_change']}%，"
+        f"主力净流入 {flow}{ratio_text}{breadth_text}"
+    )
 
 
 def _breadth_detail_lines(components: list[ComponentScore]) -> list[str]:
@@ -227,6 +242,20 @@ def _pct(value: object, total: object) -> str:
         return f"{float(value) / denominator:.1%}"
     except (TypeError, ValueError):
         return "N/A"
+
+
+def _money(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "N/A"
+    sign = "-" if number < 0 else ""
+    number = abs(number)
+    if number >= 100000000:
+        return f"{sign}{number / 100000000:.2f}亿"
+    if number >= 10000:
+        return f"{sign}{number / 10000:.2f}万"
+    return f"{sign}{number:.0f}"
 
 
 def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:

@@ -63,6 +63,14 @@ EASTMONEY_TOPIC_BASES = [
     "https://push2ex.eastmoney.com",
 ]
 
+EASTMONEY_ULIST_BASES = [
+    "https://push2.eastmoney.com",
+    "http://push2.eastmoney.com",
+    "https://82.push2.eastmoney.com",
+    "https://33.push2.eastmoney.com",
+    "https://push2his.eastmoney.com",
+]
+
 MARKET_BREADTH_INDICES = [
     ("上证市场", "1.000001"),
     ("深证市场", "0.399001"),
@@ -369,7 +377,66 @@ class DataProviders:
         return breadth
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
-        rows = self._eastmoney_clist("m:90+t:2", fields="f12,f14,f3,f6", page_size=100)
+        try:
+            return self._eastmoney_sector_fund_flow()
+        except Exception:
+            return self._eastmoney_sector_clist_fallback()
+
+    def _eastmoney_sector_fund_flow(self) -> list[SectorSnapshot]:
+        fund_rows = self._eastmoney_bkzj_rows("f62")
+        pct_rows = {str(row.get("f12") or ""): row for row in self._eastmoney_bkzj_rows("f3")}
+        amount_rows = {str(row.get("f12") or ""): row for row in self._eastmoney_bkzj_rows("f6")}
+        ratio_rows = {str(row.get("f12") or ""): row for row in self._eastmoney_bkzj_rows("f184")}
+        codes = [str(row.get("f12") or "") for row in fund_rows if row.get("f12")]
+        try:
+            quote_rows = {
+                str(row.get("f12") or ""): row
+                for row in self._eastmoney_sector_quote_rows(codes)
+            }
+        except Exception:
+            quote_rows = {}
+
+        sectors: list[SectorSnapshot] = []
+        for row in fund_rows:
+            code = str(row.get("f12") or "")
+            if not code:
+                continue
+            quote = quote_rows.get(code) or {}
+            pct_row = pct_rows.get(code) or {}
+            amount_row = amount_rows.get(code) or {}
+            ratio_row = ratio_rows.get(code) or {}
+            pct = safe_float(quote.get("f3"))
+            if pct is None:
+                pct = _scaled_percent(pct_row.get("f3"))
+            if pct is None:
+                continue
+            sectors.append(
+                SectorSnapshot(
+                    code=code,
+                    name=str(quote.get("f14") or row.get("f14") or code),
+                    pct_change=pct,
+                    amount=safe_float(quote.get("f6")) or safe_float(amount_row.get("f6")),
+                    main_net_inflow=safe_float(quote.get("f62")) or safe_float(row.get("f62")),
+                    main_net_inflow_ratio=safe_float(quote.get("f184"))
+                    or _scaled_percent(ratio_row.get("f184")),
+                    up=_safe_int(quote.get("f104")),
+                    down=_safe_int(quote.get("f105")),
+                    flat=_safe_int(quote.get("f106")),
+                    source="东方财富板块资金流"
+                    if quote_rows
+                    else "东方财富板块资金流降级",
+                )
+            )
+        if len(sectors) < 10:
+            raise ValueError("Eastmoney sector fund flow returned too few rows")
+        return sectors
+
+    def _eastmoney_sector_clist_fallback(self) -> list[SectorSnapshot]:
+        rows = self._eastmoney_clist(
+            "m:90+s:4",
+            fields="f12,f14,f3,f6,f62,f184,f104,f105,f106",
+            page_size=150,
+        )
         sectors: list[SectorSnapshot] = []
         for row in rows:
             pct = safe_float(row.get("f3"))
@@ -381,9 +448,73 @@ class DataProviders:
                     name=str(row.get("f14") or ""),
                     pct_change=pct,
                     amount=safe_float(row.get("f6")),
+                    main_net_inflow=safe_float(row.get("f62")),
+                    main_net_inflow_ratio=safe_float(row.get("f184")),
+                    up=_safe_int(row.get("f104")),
+                    down=_safe_int(row.get("f105")),
+                    flat=_safe_int(row.get("f106")),
+                    source="东方财富板块列表兜底",
                 )
             )
         return sectors
+
+    def _eastmoney_bkzj_rows(self, key: str) -> list[dict]:
+        url = "https://data.eastmoney.com/dataapi/bkzj/getbkzj"
+        data = self.http.get_json(
+            url,
+            params={"key": key, "code": "m:90+s:4"},
+            headers={
+                "Connection": "close",
+                "Referer": "https://data.eastmoney.com/bkzj/hy.html",
+            },
+        )
+        if data.get("rc") != 0:
+            raise ValueError(f"Eastmoney bkzj {key} rc={data.get('rc')}")
+        payload = data.get("data") or {}
+        rows = payload.get("diff") or []
+        if not isinstance(rows, list):
+            raise ValueError(f"Eastmoney bkzj {key} diff is not a list")
+        return [row for row in rows if isinstance(row, dict)]
+
+    def _eastmoney_sector_quote_rows(self, codes: list[str]) -> list[dict]:
+        rows: list[dict] = []
+        fields = "f12,f14,f3,f6,f62,f184,f104,f105,f106"
+        for start in range(0, len(codes), 20):
+            secids = ",".join(f"90.{code}" for code in codes[start : start + 20])
+            if not secids:
+                continue
+            rows.extend(self._eastmoney_ulist(secids, fields))
+            time.sleep(0.1)
+        return rows
+
+    def _eastmoney_ulist(self, secids: str, fields: str) -> list[dict]:
+        last_error: Exception | None = None
+        for base_url in EASTMONEY_ULIST_BASES:
+            url = (
+                f"{base_url}/api/qt/ulist.np/get"
+                f"?fltt=2&secids={secids}&fields={fields}"
+                "&ut=b2884a393a59ad64002292a3e90d46a5"
+            )
+            try:
+                data = self.http.get_json(
+                    url,
+                    headers={
+                        "Connection": "close",
+                        "Referer": "https://data.eastmoney.com/bkzj/hy.html",
+                    },
+                )
+                if data.get("rc") != 0:
+                    raise ValueError(f"Eastmoney ulist rc={data.get('rc')}")
+                payload = data.get("data") or {}
+                rows = payload.get("diff") or []
+                if isinstance(rows, list):
+                    return [row for row in rows if isinstance(row, dict)]
+                raise ValueError("Eastmoney ulist diff is not a list")
+            except Exception as exc:
+                last_error = exc
+        if last_error is not None:
+            raise last_error
+        return []
 
     def eastmoney_etfs(self) -> list[Quote]:
         etfs = [
@@ -607,3 +738,17 @@ def _limit_board_count(item: dict) -> int | None:
         if value is not None:
             return int(value)
     return None
+
+
+def _scaled_percent(value) -> float | None:
+    number = safe_float(value)
+    if number is None:
+        return None
+    return number / 100
+
+
+def _safe_int(value) -> int | None:
+    number = safe_float(value)
+    if number is None:
+        return None
+    return int(number)
