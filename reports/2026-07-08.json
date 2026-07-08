@@ -1,13 +1,13 @@
 {
   "run_date": "2026-07-08",
-  "score": 18.0,
+  "score": 28.5,
   "label": "恐惧",
   "formal": false,
   "suggested_position": "20%-40%",
   "outlook": {
-    "up": 26.1,
-    "flat": 32.7,
-    "down": 41.2
+    "up": 24.7,
+    "flat": 32.8,
+    "down": 42.5
   },
   "components": [
     {
@@ -28,26 +28,70 @@
     {
       "key": "liquidity",
       "name": "成交与流动性",
-      "score": 49.0,
+      "score": 46.0,
       "weight": 0.15,
       "status": "WARN",
       "confidence": 0.8,
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
       "details": {
-        "recent_amount": 884835845881.06,
-        "base_amount": 900772443869.33,
-        "ratio": 0.982
+        "recent_amount": 1374755576414.33,
+        "base_amount": 1479569042666.65,
+        "ratio": 0.929
       }
     },
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 50.0,
+      "score": 26.5,
       "weight": 0.18,
-      "status": "MISSING",
-      "confidence": 0.0,
-      "message": "市场宽度数据未获取到。",
-      "details": {}
+      "status": "WARN",
+      "confidence": 0.7,
+      "message": "市场宽度目前只有东方财富一个来源，可信度降低。",
+      "details": {
+        "total": 5596,
+        "up": 1628,
+        "down": 3816,
+        "flat": 152,
+        "limit_up": 47,
+        "limit_down": 41,
+        "limit_up_ratio": 0.0084,
+        "limit_down_ratio": 0.0073,
+        "first_limit_up": 39,
+        "second_limit_up": 6,
+        "third_or_more_limit_up": 2,
+        "consecutive_limit_up": 8,
+        "highest_consecutive_limit_up": 7,
+        "limit_up_pool_source": "东方财富涨跌停池",
+        "limit_up_pool_error": null,
+        "market_parts": [
+          {
+            "market": "上证市场",
+            "name": "上证指数",
+            "secid": "1.000001",
+            "up": 765,
+            "down": 1507,
+            "flat": 72
+          },
+          {
+            "market": "深证市场",
+            "name": "深证成指",
+            "secid": "0.399001",
+            "up": 803,
+            "down": 2051,
+            "flat": 74
+          },
+          {
+            "market": "北证市场",
+            "name": "北证50",
+            "secid": "0.899050",
+            "up": 60,
+            "down": 258,
+            "flat": 6
+          }
+        ],
+        "up_ratio": 0.291,
+        "down_ratio": 0.682
+      }
     },
     {
       "key": "sector",
@@ -62,13 +106,12 @@
     {
       "key": "institution",
       "name": "机构态度",
-      "score": 15.9,
+      "score": 0.0,
       "weight": 0.2,
       "status": "WARN",
-      "confidence": 0.75,
+      "confidence": 0.65,
       "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
       "details": {
-        "etf_avg_pct": -0.657,
         "if_basis_pct": -1.841
       }
     },
@@ -88,14 +131,13 @@
   ],
   "warnings": [
     "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
-    "市场宽度数据未获取到。",
+    "市场宽度目前只有东方财富一个来源，可信度降低。",
     "行业板块数据不足。",
     "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。",
-    "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
-    "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 32.7 下调至 18.0。"
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
   ],
   "institution_view": [
-    "ETF资金：宽基ETF整体走弱，机构/被动资金偏谨慎。",
+    "ETF资金：未获取到可用宽基ETF行情。",
     "股指期货：IF主连相对沪深300贴水，期货端偏谨慎。",
     "融资融券：1.0版本暂以接口可用性为前提，若未接入官方两市数据会在质量提示中说明。"
   ],
@@ -107,7 +149,7 @@
     "weak": [],
     "concentration": 0.0
   },
-  "raw_score": 32.7,
+  "raw_score": 28.5,
   "factor_contributions": [
     {
       "key": "trend",
@@ -115,35 +157,35 @@
       "score": 32.2,
       "raw_weight": 0.2,
       "confidence": 1.0,
-      "effective_weight": 0.3534,
-      "contribution": 11.38,
-      "impact_vs_neutral": -6.29,
+      "effective_weight": 0.2976,
+      "contribution": 9.58,
+      "impact_vs_neutral": -5.3,
       "status": "OK",
       "message": "趋势数据正常。"
     },
     {
       "key": "liquidity",
       "name": "成交与流动性",
-      "score": 49.0,
+      "score": 46.0,
       "raw_weight": 0.15,
       "confidence": 0.8,
-      "effective_weight": 0.212,
-      "contribution": 10.39,
-      "impact_vs_neutral": -0.21,
+      "effective_weight": 0.1786,
+      "contribution": 8.21,
+      "impact_vs_neutral": -0.71,
       "status": "WARN",
       "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
     },
     {
       "key": "breadth",
       "name": "市场宽度",
-      "score": 50.0,
+      "score": 26.5,
       "raw_weight": 0.18,
-      "confidence": 0.0,
-      "effective_weight": 0.0,
-      "contribution": 0.0,
-      "impact_vs_neutral": 0.0,
-      "status": "MISSING",
-      "message": "市场宽度数据未获取到。"
+      "confidence": 0.7,
+      "effective_weight": 0.1875,
+      "contribution": 4.97,
+      "impact_vs_neutral": -4.41,
+      "status": "WARN",
+      "message": "市场宽度目前只有东方财富一个来源，可信度降低。"
     },
     {
       "key": "sector",
@@ -160,12 +202,12 @@
     {
       "key": "institution",
       "name": "机构态度",
-      "score": 15.9,
+      "score": 0.0,
       "raw_weight": 0.2,
-      "confidence": 0.75,
-      "effective_weight": 0.265,
-      "contribution": 4.21,
-      "impact_vs_neutral": -9.04,
+      "confidence": 0.65,
+      "effective_weight": 0.1935,
+      "contribution": 0.0,
+      "impact_vs_neutral": -9.67,
       "status": "WARN",
       "message": "机构态度模块未完成多源全量校验，ETF/期货/融资融券任一缺失都会降低权重。"
     },
@@ -175,23 +217,14 @@
       "score": 39.8,
       "raw_weight": 0.12,
       "confidence": 0.8,
-      "effective_weight": 0.1696,
-      "contribution": 6.75,
-      "impact_vs_neutral": -1.73,
+      "effective_weight": 0.1429,
+      "contribution": 5.69,
+      "impact_vs_neutral": -1.46,
       "status": "WARN",
       "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
     }
   ],
-  "score_adjustments": [
-    {
-      "name": "市场宽度缺失保守校准",
-      "before": 32.7,
-      "after": 18.0,
-      "impact": -14.7,
-      "condition": "市场宽度数据缺失",
-      "message": "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，从 32.7 下调至 18.0。"
-    }
-  ],
+  "score_adjustments": [],
   "index_allocation": [
     {
       "rank": 1,
@@ -320,5 +353,5 @@
       "warning": null
     }
   ],
-  "report_schema_version": 13
+  "report_schema_version": 14
 }
