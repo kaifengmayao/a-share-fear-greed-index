@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from dataclasses import asdict
@@ -15,7 +15,7 @@ from .models import (
 )
 
 
-REPORT_SCHEMA_VERSION = 15
+REPORT_SCHEMA_VERSION = 16
 
 
 def render_markdown(result: AfgiResult) -> str:

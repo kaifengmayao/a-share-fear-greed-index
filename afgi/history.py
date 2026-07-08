@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from dataclasses import asdict
@@ -9,7 +9,7 @@ from typing import Any, Callable
 from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
 
 
-HISTORY_SCHEMA_VERSION = 15
+HISTORY_SCHEMA_VERSION = 16
 
 
 def save_market_history(

@@ -217,6 +217,49 @@ def apply_score_adjustments(
 
     down_ratio = breadth.down / breadth.total
     up_ratio = breadth.up / breadth.total
+    trend = _component_score(components, "trend", 50)
+    institution = _component_score(components, "institution", 50)
+    sector_details = _component_details(components, "sector")
+    sector_up_ratio = sector_details.get("sector_up_ratio")
+    fund_positive_ratio = sector_details.get("fund_positive_ratio")
+    if (
+        down_ratio >= 0.65
+        and up_ratio <= 0.32
+        and _lte(sector_up_ratio, 0.30)
+        and _lte(fund_positive_ratio, 0.35)
+        and institution <= 20
+        and trend <= 40
+    ):
+        panic_cap = clamp(
+            2
+            + up_ratio * 14
+            + float(sector_up_ratio) * 5
+            + float(fund_positive_ratio) * 3,
+            6,
+            12,
+        )
+        if score > panic_cap:
+            adjusted = round(panic_cap, 1)
+            condition = (
+                f"下跌股票占比 {down_ratio:.1%}，板块上涨占比 {float(sector_up_ratio):.1%}，"
+                f"主力资金为正板块占比 {float(fund_positive_ratio):.1%}，"
+                f"机构 {institution:.1f}，趋势 {trend:.1f}"
+            )
+            message = (
+                f"扩散式恐慌校准：{condition}，个股、板块、资金与机构态度同步偏弱，"
+                f"最终指数从 {score:.1f} 下调至 {adjusted:.1f}。"
+            )
+            return adjusted, [
+                ScoreAdjustment(
+                    name="扩散式恐慌校准",
+                    before=round(score, 1),
+                    after=adjusted,
+                    impact=round(adjusted - score, 1),
+                    condition=condition,
+                    message=message,
+                )
+            ]
+
     cap = None
     if down_ratio >= 0.80:
         cap = clamp(8 + up_ratio * 45, 10, 18)
@@ -729,6 +772,20 @@ def _component_score(components: list[ComponentScore], key: str, default: float)
         if component.key == key:
             return component.score
     return default
+
+
+def _component_details(components: list[ComponentScore], key: str) -> dict:
+    for component in components:
+        if component.key == key:
+            return component.details or {}
+    return {}
+
+
+def _lte(value, threshold: float) -> bool:
+    try:
+        return float(value) <= threshold
+    except (TypeError, ValueError):
+        return False
 
 
 def _safe_call(fn, default):
