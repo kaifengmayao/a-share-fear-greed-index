@@ -77,6 +77,15 @@ MARKET_BREADTH_INDICES = [
     ("北证市场", "0.899050"),
 ]
 
+MIN_MARKET_BREADTH_TOTAL = 4000
+
+MARKET_BREADTH_LIST_SOURCES = [
+    ("eastmoney_all_a_clist", "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"),
+    ("eastmoney_sh_sz_clist", "m:0+t:6,m:0+t:80,m:1+t:2"),
+    ("eastmoney_sh_clist", "m:1+t:2,m:1+t:23"),
+    ("eastmoney_sz_clist", "m:0+t:6,m:0+t:80"),
+]
+
 
 class DataProviders:
     def __init__(self, http: HttpClient) -> None:
@@ -264,12 +273,22 @@ class DataProviders:
         cached = self._cache.get("eastmoney_breadth")
         if isinstance(cached, MarketBreadth):
             return cached
+        errors: list[str] = []
         try:
             breadth = self._eastmoney_aggregate_breadth()
-        except Exception:
+            self._validate_market_breadth(breadth)
+            self._cache["eastmoney_breadth"] = breadth
+            return breadth
+        except Exception as exc:
+            errors.append(f"aggregate: {exc}")
+        try:
             breadth = self._eastmoney_list_breadth()
-        self._cache["eastmoney_breadth"] = breadth
-        return breadth
+            self._validate_market_breadth(breadth)
+            self._cache["eastmoney_breadth"] = breadth
+            return breadth
+        except Exception as exc:
+            errors.append(f"clist: {exc}")
+        raise ValueError("Market breadth data failed coverage checks: " + " | ".join(errors))
 
     def _eastmoney_aggregate_breadth(self) -> MarketBreadth:
         fields = "f58,f113,f114,f115"
@@ -339,8 +358,19 @@ class DataProviders:
         raise ValueError(f"Eastmoney stock/get failed for {secid}")
 
     def _eastmoney_list_breadth(self) -> MarketBreadth:
+        errors: list[str] = []
+        for source, fs in MARKET_BREADTH_LIST_SOURCES:
+            try:
+                breadth = self._eastmoney_list_breadth_for(source, fs)
+                self._validate_market_breadth(breadth)
+                return breadth
+            except Exception as exc:
+                errors.append(f"{source}: {exc}")
+        raise ValueError("Eastmoney list breadth unavailable: " + " | ".join(errors))
+
+    def _eastmoney_list_breadth_for(self, source: str, fs: str) -> MarketBreadth:
         rows = self._eastmoney_clist(
-            "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
+            fs,
             fields="f12,f14,f2,f3,f6",
             page_size=6000,
         )
@@ -358,7 +388,7 @@ class DataProviders:
         if limit_stats.get("limit_down") is not None:
             limit_down = int(limit_stats["limit_down"])
         breadth = MarketBreadth(
-            source="东方财富分页列表",
+            source=source,
             total=len(changes),
             up=up,
             down=down,
@@ -375,6 +405,24 @@ class DataProviders:
             limit_up_pool_error=limit_stats.get("error"),
         )
         return breadth
+
+    def _validate_market_breadth(self, breadth: MarketBreadth) -> None:
+        counted = breadth.up + breadth.down + breadth.flat
+        if breadth.total < MIN_MARKET_BREADTH_TOTAL:
+            raise ValueError(
+                f"{breadth.source} returned only {breadth.total} stocks; "
+                f"expected at least {MIN_MARKET_BREADTH_TOTAL}"
+            )
+        if counted < MIN_MARKET_BREADTH_TOTAL:
+            raise ValueError(
+                f"{breadth.source} counted only {counted} up/down/flat stocks; "
+                f"expected at least {MIN_MARKET_BREADTH_TOTAL}"
+            )
+        if abs(counted - breadth.total) > max(20, breadth.total * 0.02):
+            raise ValueError(
+                f"{breadth.source} inconsistent breadth total: "
+                f"total={breadth.total}, counted={counted}"
+            )
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
         try:

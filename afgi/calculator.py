@@ -17,7 +17,12 @@ from .models import (
     SectorSnapshot,
     SourceValue,
 )
-from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
+from .providers import (
+    DataProviders,
+    INDEX_ALLOCATION_UNIVERSE,
+    MIN_MARKET_BREADTH_TOTAL,
+    collect_attempts,
+)
 from .quality import consensus
 from .utils import clamp, mean, pct_to_score, today_cn
 
@@ -191,7 +196,7 @@ def apply_score_adjustments(
 ) -> tuple[float | None, list[ScoreAdjustment]]:
     if score is None:
         return score, []
-    if not breadth or breadth.total <= 0:
+    if not breadth or breadth.total < MIN_MARKET_BREADTH_TOTAL:
         trend = _component_score(components, "trend", 50)
         institution = _component_score(components, "institution", 50)
         risk = _component_score(components, "risk", 50)
@@ -203,7 +208,10 @@ def apply_score_adjustments(
             "市场宽度核心数据缺失，最终指数保守封顶在恐惧区，"
             f"从 {score:.1f} 下调至 {adjusted:.1f}。"
         )
-        condition = "市场宽度数据缺失"
+        if breadth and breadth.total > 0:
+            condition = f"市场宽度样本不足（{breadth.total} 家，低于 {MIN_MARKET_BREADTH_TOTAL} 家）"
+        else:
+            condition = "市场宽度数据缺失"
         if cap < 18.0:
             condition += f"，且机构/趋势/风险同步偏弱（机构 {institution:.1f}，趋势 {trend:.1f}，风险 {risk:.1f}）"
         return adjusted, [
@@ -568,6 +576,13 @@ def _trend_component(klines: list[KLine], pct_quality) -> ComponentScore:
 def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
     if not breadth or breadth.total <= 0:
         return _missing("breadth", "市场宽度", WEIGHTS["breadth"], "市场宽度数据未获取到。")
+    if breadth.total < MIN_MARKET_BREADTH_TOTAL:
+        return _missing(
+            "breadth",
+            "市场宽度",
+            WEIGHTS["breadth"],
+            f"市场宽度样本不足：仅 {breadth.total} 家，低于 {MIN_MARKET_BREADTH_TOTAL} 家最低覆盖要求。",
+        )
     up_ratio = breadth.up / breadth.total
     down_ratio = breadth.down / breadth.total
     limit_balance = (breadth.limit_up - breadth.limit_down) / max(1, breadth.limit_up + breadth.limit_down)
