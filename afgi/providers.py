@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from datetime import datetime
 import re
 import time
@@ -47,6 +48,12 @@ EASTMONEY_CLIST_HOSTS = [
     "82.push2.eastmoney.com",
     "33.push2.eastmoney.com",
     "push2his.eastmoney.com",
+]
+
+MARKET_BREADTH_INDICES = [
+    ("上证市场", "1.000001"),
+    ("深证市场", "0.399001"),
+    ("北证市场", "0.899050"),
 ]
 
 
@@ -236,6 +243,67 @@ class DataProviders:
         cached = self._cache.get("eastmoney_breadth")
         if isinstance(cached, MarketBreadth):
             return cached
+        try:
+            breadth = self._eastmoney_aggregate_breadth()
+        except Exception:
+            breadth = self._eastmoney_list_breadth()
+        self._cache["eastmoney_breadth"] = breadth
+        return breadth
+
+    def _eastmoney_aggregate_breadth(self) -> MarketBreadth:
+        fields = "f58,f113,f114,f115"
+        parts: list[dict] = []
+        up = down = flat = 0
+        for market_name, secid in MARKET_BREADTH_INDICES:
+            url = f"http://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields={fields}"
+            data = self.http.get_json(
+                url,
+                headers={
+                    "Connection": "close",
+                    "Referer": "https://quote.eastmoney.com/",
+                },
+            ).get("data") or {}
+            part_up = int(safe_float(data.get("f113")) or 0)
+            part_down = int(safe_float(data.get("f114")) or 0)
+            part_flat = int(safe_float(data.get("f115")) or 0)
+            parts.append(
+                {
+                    "market": market_name,
+                    "name": data.get("f58") or secid,
+                    "secid": secid,
+                    "up": part_up,
+                    "down": part_down,
+                    "flat": part_flat,
+                }
+            )
+            up += part_up
+            down += part_down
+            flat += part_flat
+
+        if up + down + flat <= 0:
+            raise ValueError("Eastmoney aggregate market breadth is empty")
+
+        limit_stats = self._eastmoney_limit_stats()
+        return MarketBreadth(
+            source="东方财富指数聚合",
+            total=up + down + flat,
+            up=up,
+            down=down,
+            flat=flat,
+            limit_up=int(limit_stats.get("limit_up") or 0),
+            limit_down=int(limit_stats.get("limit_down") or 0),
+            total_amount=0,
+            first_limit_up=limit_stats.get("first_limit_up"),
+            second_limit_up=limit_stats.get("second_limit_up"),
+            third_or_more_limit_up=limit_stats.get("third_or_more_limit_up"),
+            consecutive_limit_up=limit_stats.get("consecutive_limit_up"),
+            highest_consecutive_limit_up=limit_stats.get("highest_consecutive_limit_up"),
+            limit_up_pool_source=limit_stats.get("source"),
+            limit_up_pool_error=limit_stats.get("error"),
+            market_parts=parts,
+        )
+
+    def _eastmoney_list_breadth(self) -> MarketBreadth:
         rows = self._eastmoney_clist(
             "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23",
             fields="f12,f14,f2,f3,f6",
@@ -247,17 +315,30 @@ class DataProviders:
         up = sum(1 for value in changes if value > 0)
         down = sum(1 for value in changes if value < 0)
         flat = sum(1 for value in changes if value == 0)
+        limit_up = sum(1 for value in changes if value >= 9.5)
+        limit_down = sum(1 for value in changes if value <= -9.5)
+        limit_stats = self._eastmoney_limit_stats()
+        if limit_stats.get("limit_up") is not None:
+            limit_up = int(limit_stats["limit_up"])
+        if limit_stats.get("limit_down") is not None:
+            limit_down = int(limit_stats["limit_down"])
         breadth = MarketBreadth(
-            source="东方财富",
+            source="东方财富分页列表",
             total=len(changes),
             up=up,
             down=down,
             flat=flat,
-            limit_up=sum(1 for value in changes if value >= 9.5),
-            limit_down=sum(1 for value in changes if value <= -9.5),
+            limit_up=limit_up,
+            limit_down=limit_down,
             total_amount=total_amount,
+            first_limit_up=limit_stats.get("first_limit_up"),
+            second_limit_up=limit_stats.get("second_limit_up"),
+            third_or_more_limit_up=limit_stats.get("third_or_more_limit_up"),
+            consecutive_limit_up=limit_stats.get("consecutive_limit_up"),
+            highest_consecutive_limit_up=limit_stats.get("highest_consecutive_limit_up"),
+            limit_up_pool_source=limit_stats.get("source"),
+            limit_up_pool_error=limit_stats.get("error"),
         )
-        self._cache["eastmoney_breadth"] = breadth
         return breadth
 
     def eastmoney_sectors(self) -> list[SectorSnapshot]:
@@ -379,6 +460,81 @@ class DataProviders:
             raise last_error
         return {}
 
+    def _eastmoney_limit_stats(self) -> dict:
+        stats = {
+            "source": "东方财富涨跌停池",
+            "limit_up": None,
+            "limit_down": None,
+            "first_limit_up": None,
+            "second_limit_up": None,
+            "third_or_more_limit_up": None,
+            "consecutive_limit_up": None,
+            "highest_consecutive_limit_up": None,
+            "error": None,
+        }
+        errors: list[str] = []
+        try:
+            payload = self._eastmoney_topic_payload("getTopicZTPool")
+            pool = self._topic_pool(payload)
+            consecutive_values = [_limit_board_count(item) for item in pool]
+            consecutive_values = [value for value in consecutive_values if value is not None]
+            first = sum(1 for value in consecutive_values if value == 1)
+            second = sum(1 for value in consecutive_values if value == 2)
+            third_or_more = sum(1 for value in consecutive_values if value >= 3)
+            consecutive = sum(1 for value in consecutive_values if value >= 2)
+            highest = max(consecutive_values) if consecutive_values else None
+            stats.update(
+                {
+                    "limit_up": int(safe_float(payload.get("tc")) or len(pool)),
+                    "first_limit_up": first,
+                    "second_limit_up": second,
+                    "third_or_more_limit_up": third_or_more,
+                    "consecutive_limit_up": consecutive,
+                    "highest_consecutive_limit_up": highest,
+                }
+            )
+        except Exception as exc:
+            errors.append(f"涨停池: {exc}")
+
+        try:
+            payload = self._eastmoney_topic_payload("getTopicDTPool")
+            down_pool = self._topic_pool(payload)
+            stats["limit_down"] = int(safe_float(payload.get("tc")) or len(down_pool))
+        except Exception as exc:
+            errors.append(f"跌停池: {exc}")
+
+        if errors:
+            stats["error"] = "; ".join(errors)
+        return stats
+
+    def _eastmoney_topic_payload(self, endpoint: str) -> dict:
+        today = date.today().strftime("%Y%m%d")
+        url = (
+            f"http://push2ex.eastmoney.com/{endpoint}"
+            "?ut=7eea3edcaed734bea9cbfc24409ed989"
+            "&dpt=wz.ztzt"
+            f"&Pageindex=0&pagesize=1000&sort=fbt:asc&date={today}"
+        )
+        data = self.http.get_json(
+            url,
+            headers={
+                "Connection": "close",
+                "Referer": "https://quote.eastmoney.com/ztb/",
+            },
+        )
+        if data.get("rc") != 0:
+            raise ValueError(f"{endpoint} rc={data.get('rc')}")
+        payload = data.get("data") or {}
+        if not isinstance(payload, dict):
+            raise ValueError(f"{endpoint} response data is not a dict")
+        return payload
+
+    def _topic_pool(self, payload: dict) -> list[dict]:
+        pool = payload.get("pool") or []
+        if not isinstance(pool, list):
+            raise ValueError("topic response pool is not a list")
+        return [item for item in pool if isinstance(item, dict)]
+
 
 def collect_attempts(
     functions: list[tuple[str, Callable[[], Quote]]],
@@ -408,3 +564,11 @@ def _parse_tencent_hq(text: str) -> list[str]:
     if not match:
         raise ValueError("Tencent response has no quote payload")
     return match.group(1).split("~")
+
+
+def _limit_board_count(item: dict) -> int | None:
+    for key in ("lbc", "连板数", "lb"):
+        value = safe_float(item.get(key))
+        if value is not None:
+            return int(value)
+    return None

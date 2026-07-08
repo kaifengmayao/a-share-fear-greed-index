@@ -73,6 +73,14 @@ class MarketBreadth:
     limit_up: int
     limit_down: int
     total_amount: float
+    first_limit_up: int | None = None
+    second_limit_up: int | None = None
+    third_or_more_limit_up: int | None = None
+    consecutive_limit_up: int | None = None
+    highest_consecutive_limit_up: int | None = None
+    limit_up_pool_source: str | None = None
+    limit_up_pool_error: str | None = None
+    market_parts: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

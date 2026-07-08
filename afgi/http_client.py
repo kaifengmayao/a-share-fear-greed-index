@@ -16,6 +16,7 @@ class HttpClient:
     def __init__(self, timeout: float = 12.0) -> None:
         self.timeout = timeout
         self.session = requests.Session()
+        self.session.trust_env = False
         self.session.headers.update(DEFAULT_HEADERS)
 
     def get_json(self, url: str, **kwargs):

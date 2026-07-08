@@ -503,12 +503,22 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
     up_ratio = breadth.up / breadth.total
     down_ratio = breadth.down / breadth.total
     limit_balance = (breadth.limit_up - breadth.limit_down) / max(1, breadth.limit_up + breadth.limit_down)
-    score = up_ratio * 75 + (limit_balance + 1) * 12.5
+    limit_up_ratio = breadth.limit_up / max(1, breadth.total)
+    limit_down_ratio = breadth.limit_down / max(1, breadth.total)
+    consecutive_heat = min((breadth.consecutive_limit_up or 0) / 30, 1.0)
+    high_board_heat = min((breadth.third_or_more_limit_up or 0) / 12, 1.0)
+    limit_score = (limit_balance + 1) * 10 + consecutive_heat * 8 + high_board_heat * 5
+    drawdown_penalty = min(limit_down_ratio * 900, 15)
+    score = up_ratio * 67 + limit_score - drawdown_penalty
     message = "市场宽度目前只有东方财富一个来源，可信度降低。"
     if down_ratio >= 0.80:
         message = "全市场下跌占比超过80%，普跌压力极端，市场宽度触发强恐惧信号。"
     elif down_ratio >= 0.70:
         message = "全市场下跌占比超过70%，普跌压力较强，市场宽度显著偏弱。"
+    elif breadth.consecutive_limit_up and breadth.consecutive_limit_up >= 20:
+        message = "连板家数较多，短线资金活跃，市场宽度偏强但需留意情绪拥挤。"
+    elif breadth.limit_down >= max(10, breadth.limit_up):
+        message = "跌停压力高于涨停接力，短线情绪偏弱。"
     return ComponentScore(
         key="breadth",
         name="市场宽度",
@@ -521,8 +531,19 @@ def _breadth_component(breadth: MarketBreadth | None) -> ComponentScore:
             "total": breadth.total,
             "up": breadth.up,
             "down": breadth.down,
+            "flat": breadth.flat,
             "limit_up": breadth.limit_up,
             "limit_down": breadth.limit_down,
+            "limit_up_ratio": round(limit_up_ratio, 4),
+            "limit_down_ratio": round(limit_down_ratio, 4),
+            "first_limit_up": breadth.first_limit_up,
+            "second_limit_up": breadth.second_limit_up,
+            "third_or_more_limit_up": breadth.third_or_more_limit_up,
+            "consecutive_limit_up": breadth.consecutive_limit_up,
+            "highest_consecutive_limit_up": breadth.highest_consecutive_limit_up,
+            "limit_up_pool_source": breadth.limit_up_pool_source,
+            "limit_up_pool_error": breadth.limit_up_pool_error,
+            "market_parts": breadth.market_parts,
             "up_ratio": round(up_ratio, 3),
             "down_ratio": round(down_ratio, 3),
         },

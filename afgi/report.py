@@ -15,7 +15,7 @@ from .models import (
 )
 
 
-REPORT_SCHEMA_VERSION = 10
+REPORT_SCHEMA_VERSION = 13
 
 
 def render_markdown(result: AfgiResult) -> str:
@@ -108,6 +108,10 @@ def render_markdown(result: AfgiResult) -> str:
             f"- {component.name}：{component.score:.1f}，权重 {component.weight:.0%}，"
             f"状态 {component.status.value}，置信度 {component.confidence:.0%}"
         )
+    breadth_lines = _breadth_detail_lines(result.components)
+    if breadth_lines:
+        lines.extend(["", "## 市场宽度明细", ""])
+        lines.extend(breadth_lines)
 
     return "\n".join(lines) + "\n"
 
@@ -152,6 +156,11 @@ def render_wechat_markdown(result: AfgiResult) -> str:
         for item in result.score_adjustments[:2]:
             lines.append(f"- {item.name}：{item.before:.1f} -> {item.after:.1f}（{item.impact:+.1f}）")
 
+    breadth_lines = _breadth_detail_lines(result.components)
+    if breadth_lines:
+        lines.extend(["", "### 市场宽度明细"])
+        lines.extend(breadth_lines[:5])
+
     lines.extend(["", "### 数据质量提示"])
     lines.extend([f"- {item}" for item in warnings])
     lines.extend(["", "### 机构态度"])
@@ -165,6 +174,59 @@ def render_wechat_markdown(result: AfgiResult) -> str:
         lines.extend(["", "### 弱势板块"])
         lines.extend([f"- {item['name']}：{item['pct_change']}%" for item in weak])
     return "\n".join(lines)
+
+
+def _breadth_detail_lines(components: list[ComponentScore]) -> list[str]:
+    breadth = next((item for item in components if item.key == "breadth"), None)
+    if not breadth:
+        return []
+    details = breadth.details or {}
+    total = details.get("total")
+    up = details.get("up")
+    down = details.get("down")
+    if total is None or up is None or down is None:
+        return []
+    flat = details.get("flat", 0)
+    up_ratio = _pct(up, total)
+    down_ratio = _pct(down, total)
+    lines = [
+        f"- 全A涨跌：上涨 {up} 家（{up_ratio}），下跌 {down} 家（{down_ratio}），平盘 {flat} 家。",
+        f"- 涨跌停：涨停 {details.get('limit_up', 0)} 家，跌停 {details.get('limit_down', 0)} 家。",
+    ]
+    first = details.get("first_limit_up")
+    second = details.get("second_limit_up")
+    third = details.get("third_or_more_limit_up")
+    consecutive = details.get("consecutive_limit_up")
+    highest = details.get("highest_consecutive_limit_up")
+    if any(value is not None for value in (first, second, third, consecutive, highest)):
+        lines.append(
+            "- 连板结构："
+            f"首板 {first or 0} 家，二板 {second or 0} 家，三板及以上 {third or 0} 家，"
+            f"连板 {consecutive or 0} 家，最高 {highest or 0} 板。"
+        )
+    market_parts = details.get("market_parts") or []
+    if market_parts:
+        part_text = []
+        for item in market_parts:
+            part_text.append(
+                f"{item.get('market') or item.get('name')} 上涨 {item.get('up', 0)} / "
+                f"下跌 {item.get('down', 0)} / 平盘 {item.get('flat', 0)}"
+            )
+        lines.append("- 市场拆分：" + "；".join(part_text) + "。")
+    error = details.get("limit_up_pool_error")
+    if error:
+        lines.append(f"- 涨跌停池提示：{error}")
+    return lines
+
+
+def _pct(value: object, total: object) -> str:
+    try:
+        denominator = float(total)
+        if denominator <= 0:
+            return "N/A"
+        return f"{float(value) / denominator:.1%}"
+    except (TypeError, ValueError):
+        return "N/A"
 
 
 def save_reports(result: AfgiResult, directory: Path) -> tuple[Path, Path]:
