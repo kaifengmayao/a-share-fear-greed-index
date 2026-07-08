@@ -77,6 +77,16 @@ SINA_MARKET_CENTER_URL = (
     "Market_Center.getHQNodeData"
 )
 
+BROAD_ETFS = [
+    ("1.510300", "sh510300"),
+    ("1.510330", "sh510330"),
+    ("0.159919", "sz159919"),
+    ("1.510310", "sh510310"),
+    ("1.510050", "sh510050"),
+    ("0.159922", "sz159922"),
+    ("1.512500", "sh512500"),
+]
+
 MARKET_BREADTH_INDICES = [
     ("上证市场", "1.000001"),
     ("深证市场", "0.399001"),
@@ -641,18 +651,22 @@ class DataProviders:
             raise last_error
         return []
 
+    def broad_etfs(self) -> list[Quote]:
+        eastmoney_quotes = self.eastmoney_etfs()
+        if self._current_quote_count(eastmoney_quotes) >= 4:
+            return eastmoney_quotes
+        sina_quotes = self.sina_etfs()
+        if self._current_quote_count(sina_quotes) >= 4:
+            return sina_quotes
+        return eastmoney_quotes + sina_quotes
+
+    def _current_quote_count(self, quotes: list[Quote]) -> int:
+        today = datetime.now(CN_TZ).date().isoformat()
+        return sum(1 for quote in quotes if quote.trade_date == today and quote.pct_change is not None)
+
     def eastmoney_etfs(self) -> list[Quote]:
-        etfs = [
-            "1.510300",
-            "1.510330",
-            "0.159919",
-            "1.510310",
-            "1.510050",
-            "0.159922",
-            "1.512500",
-        ]
         quotes: list[Quote] = []
-        for secid in etfs:
+        for secid, _ in BROAD_ETFS:
             try:
                 data = self._eastmoney_stock_get(secid, "f58,f43,f48,f60,f170,f86")
                 price = (safe_float(data.get("f43")) or 0) / 1000
@@ -671,6 +685,38 @@ class DataProviders:
                 )
             except Exception:
                 continue
+        return quotes
+
+    def sina_etfs(self) -> list[Quote]:
+        symbols = ",".join(symbol for _, symbol in BROAD_ETFS)
+        text = self.http.get_text(
+            f"https://hq.sinajs.cn/list={symbols}",
+            headers={
+                "Connection": "close",
+                "Referer": "https://finance.sina.com.cn/",
+            },
+        )
+        quotes: list[Quote] = []
+        for symbol, fields in _parse_sina_hq_quotes(text):
+            if len(fields) < 31:
+                continue
+            price = safe_float(fields[3])
+            previous_close = safe_float(fields[2])
+            if price is None or not previous_close:
+                continue
+            amount = safe_float(fields[9])
+            pct_change = (price / previous_close - 1) * 100
+            quotes.append(
+                Quote(
+                    source="新浪ETF",
+                    name=fields[0] or symbol,
+                    price=price,
+                    previous_close=previous_close,
+                    pct_change=pct_change,
+                    amount=amount,
+                    trade_date=fields[30] if len(fields) > 30 and fields[30] else None,
+                )
+            )
         return quotes
 
     def sina_if_main(self) -> Quote:
@@ -879,6 +925,13 @@ def _parse_sina_hq(text: str) -> list[str]:
     if not match:
         raise ValueError("Sina response has no quote payload")
     return match.group(1).split(",")
+
+
+def _parse_sina_hq_quotes(text: str) -> list[tuple[str, list[str]]]:
+    matches = re.findall(r'var hq_str_([^=]+)="([^"]*)"', text)
+    if not matches:
+        raise ValueError("Sina response has no quote payload")
+    return [(symbol, payload.split(",")) for symbol, payload in matches if payload]
 
 
 def _parse_sina_market_center_rows(text: str) -> list[dict]:

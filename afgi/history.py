@@ -9,7 +9,7 @@ from typing import Any, Callable
 from .providers import DataProviders, INDEX_ALLOCATION_UNIVERSE, collect_attempts
 
 
-HISTORY_SCHEMA_VERSION = 19
+HISTORY_SCHEMA_VERSION = 20
 
 
 def save_market_history(
@@ -45,7 +45,9 @@ def save_market_history(
             "market_breadth": _capture(providers.eastmoney_breadth),
             "sectors": _capture(providers.eastmoney_sectors),
             "institution_auxiliary": {
-                "broad_etf_quotes": _capture(providers.eastmoney_etfs),
+                "broad_etf_quotes": _capture(providers.broad_etfs),
+                "eastmoney_etf_quotes": _capture(providers.eastmoney_etfs),
+                "sina_etf_quotes": _capture(providers.sina_etfs),
                 "if_main": _capture(providers.sina_if_main),
                 "margin_summary": _capture(providers.eastmoney_margin_summary),
             },

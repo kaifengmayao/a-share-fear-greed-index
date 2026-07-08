@@ -89,10 +89,10 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     sectors = _safe_call(providers.eastmoney_sectors, [])
     components.append(_sector_component(sectors))
 
-    etfs = _safe_call(providers.eastmoney_etfs, [])
+    etfs = _safe_call(providers.broad_etfs, [])
     future_quote = _safe_call(providers.sina_if_main, None)
     margin = _safe_call(providers.eastmoney_margin_summary, None)
-    components.append(_institution_component(etfs, future_quote, margin, price_quality, run_date))
+    components.append(_institution_component(etfs, future_quote, margin, price_quality, run_date, sectors))
 
     components.append(_risk_component(klines))
 
@@ -119,7 +119,7 @@ def calculate_afgi(providers: DataProviders) -> AfgiResult:
     label = classify_score(score)
     emotion_map = build_emotion_map(sectors)
     outlook = build_outlook(score, components)
-    institution_view = build_institution_view(etfs, future_quote, margin, price_quality, run_date)
+    institution_view = build_institution_view(etfs, future_quote, margin, price_quality, run_date, sectors)
     risk_tips = build_risk_tips(score, components, emotion_map, formal)
     factor_contributions = build_factor_contributions(components)
     index_allocation = build_index_allocation(providers)
@@ -460,6 +460,7 @@ def build_institution_view(
     margin: MarginSnapshot | None,
     price_quality,
     run_date,
+    sectors: list[SectorSnapshot],
 ) -> list[str]:
     notes: list[str] = []
     run_date_text = run_date.isoformat()
@@ -486,6 +487,26 @@ def build_institution_view(
             notes.append("股指期货：当日IF主连基差接近中性。")
     else:
         notes.append("股指期货：未获取到当日IF主连或沪深300点位，未纳入机构态度评分。")
+
+    main_flow = _sector_main_flow_proxy(sectors)
+    if main_flow:
+        if main_flow["net_flow_ratio"] > 0.25 and main_flow["positive_ratio"] > 0.55:
+            notes.append(
+                f"主力资金：行业主力净流入占成交额 {main_flow['net_flow_ratio']:.2f}%，"
+                f"净流入板块占比 {main_flow['positive_ratio']:.1%}，大资金偏积极。"
+            )
+        elif main_flow["net_flow_ratio"] < -0.25 or main_flow["positive_ratio"] < 0.4:
+            notes.append(
+                f"主力资金：行业主力净流入占成交额 {main_flow['net_flow_ratio']:.2f}%，"
+                f"净流入板块占比 {main_flow['positive_ratio']:.1%}，大资金偏谨慎。"
+            )
+        else:
+            notes.append(
+                f"主力资金：行业主力净流入占成交额 {main_flow['net_flow_ratio']:.2f}%，"
+                f"净流入板块占比 {main_flow['positive_ratio']:.1%}，整体中性。"
+            )
+    else:
+        notes.append("主力资金：未获取到足够行业资金流数据，未纳入机构态度评分。")
 
     if margin and margin.trade_date == run_date_text:
         notes.append(
@@ -659,8 +680,9 @@ def _institution_component(
     margin: MarginSnapshot | None,
     price_quality,
     run_date,
+    sectors: list[SectorSnapshot],
 ) -> ComponentScore:
-    sub_scores: list[float] = []
+    weighted_scores: list[tuple[float, float]] = []
     details = {"run_date": run_date.isoformat()}
     run_date_text = run_date.isoformat()
     current_etfs = [
@@ -668,23 +690,32 @@ def _institution_component(
     ]
     etf_pct = _amount_weighted_pct(current_etfs)
     if etf_pct is not None:
-        sub_scores.append(pct_to_score(etf_pct, scale=1.5))
+        weighted_scores.append((pct_to_score(etf_pct, scale=1.5), 0.40))
         details["etf_amount_weighted_pct"] = round(etf_pct, 3)
         details["etf_count"] = len(current_etfs)
         details["etf_total_amount"] = round(sum(q.amount or 0 for q in current_etfs), 2)
         details["etf_trade_date"] = run_date_text
+        details["etf_source"] = current_etfs[0].source if current_etfs else None
     elif etfs:
         details["etf_latest_trade_date"] = max((q.trade_date or "") for q in etfs) or None
         details["etf_stale_or_missing"] = True
 
     if future_quote and future_quote.trade_date == run_date_text and price_quality.value:
         basis_pct = (future_quote.price / price_quality.value - 1) * 100
-        sub_scores.append(pct_to_score(basis_pct, scale=0.8))
+        weighted_scores.append((pct_to_score(basis_pct, scale=0.8), 0.30))
         details["if_basis_pct"] = round(basis_pct, 3)
         details["if_trade_date"] = future_quote.trade_date
     elif future_quote:
         details["if_latest_trade_date"] = future_quote.trade_date
         details["if_stale_or_missing"] = True
+
+    main_flow = _sector_main_flow_proxy(sectors)
+    if main_flow:
+        weighted_scores.append((main_flow["score"], 0.30))
+        details["sector_main_net_flow"] = round(main_flow["net_flow"], 2)
+        details["sector_main_net_flow_ratio"] = round(main_flow["net_flow_ratio"], 4)
+        details["sector_main_positive_ratio"] = round(main_flow["positive_ratio"], 4)
+        details["sector_main_flow_count"] = main_flow["count"]
 
     if margin:
         details["margin_trade_date"] = margin.trade_date
@@ -693,24 +724,27 @@ def _institution_component(
         details["margin_financing_net_buy"] = margin.financing_net_buy
         if margin.trade_date == run_date_text and margin.rzrq_balance:
             margin_ratio = ((margin.financing_net_buy or 0) / margin.rzrq_balance) * 100
-            sub_scores.append(clamp(50 + margin_ratio * 350))
+            weighted_scores.append((clamp(50 + margin_ratio * 350), 0.15))
             details["margin_financing_net_buy_ratio"] = round(margin_ratio, 4)
         else:
             details["margin_stale_or_missing"] = True
 
-    if not sub_scores:
-        return _missing("institution", "机构态度", WEIGHTS["institution"], "未获取到当日ETF、股指期货或融资融券数据。")
+    if not weighted_scores:
+        return _missing("institution", "机构态度", WEIGHTS["institution"], "未获取到当日ETF、股指期货或主力资金数据。")
 
     status = QualityStatus.WARN
-    confidence = 0.6 if len(sub_scores) == 1 else (0.78 if len(sub_scores) == 2 else 0.88)
+    source_count = len(weighted_scores)
+    confidence = 0.62 if source_count == 1 else (0.80 if source_count == 2 else 0.90)
+    total_weight = sum(weight for _, weight in weighted_scores)
+    score = sum(score * weight for score, weight in weighted_scores) / total_weight
     return ComponentScore(
         key="institution",
         name="机构态度",
-        score=round(clamp(statistics.fmean(sub_scores)), 1),
+        score=round(clamp(score), 1),
         weight=WEIGHTS["institution"],
         status=status,
         confidence=confidence,
-        message="机构态度仅纳入当日可验证数据；ETF、期货、融资融券任一滞后都会降低权重。",
+        message="机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。",
         details=details,
     )
 
@@ -854,6 +888,30 @@ def _amount_weighted_pct(quotes: list[Quote]) -> float | None:
     if total_amount > 0:
         return weighted_sum / total_amount
     return statistics.fmean(simple_values) if simple_values else None
+
+
+def _sector_main_flow_proxy(sectors: list[SectorSnapshot]) -> dict | None:
+    usable = [
+        item
+        for item in sectors
+        if item.main_net_inflow is not None and item.amount and item.amount > 0
+    ]
+    if len(usable) < 20:
+        return None
+    net_flow = sum(item.main_net_inflow or 0 for item in usable)
+    total_amount = sum(item.amount or 0 for item in usable)
+    if total_amount <= 0:
+        return None
+    net_flow_ratio = net_flow / total_amount * 100
+    positive_ratio = sum(1 for item in usable if (item.main_net_inflow or 0) > 0) / len(usable)
+    score = clamp(50 + net_flow_ratio * 18 + (positive_ratio - 0.5) * 45)
+    return {
+        "score": round(score, 1),
+        "net_flow": net_flow,
+        "net_flow_ratio": net_flow_ratio,
+        "positive_ratio": positive_ratio,
+        "count": len(usable),
+    }
 
 
 def _money_text(value: float | None) -> str:
