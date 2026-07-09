@@ -14,12 +14,14 @@ class Settings:
     serverchan_sendkey: str | None = None
     dry_run: bool = False
     force_recalculate: bool = False
+    skip_if_sent: bool = False
 
     @staticmethod
     def from_env() -> "Settings":
         send_enabled = os.getenv("AFGI_SEND_ENABLED", "true").lower() == "true"
         dry_run = os.getenv("AFGI_DRY_RUN", "false").lower() == "true"
         force_recalculate = os.getenv("AFGI_FORCE_RECALCULATE", "false").lower() == "true"
+        skip_if_sent = os.getenv("AFGI_SKIP_IF_SENT", "false").lower() == "true"
         wxpusher_uids = [
             item.strip()
             for item in os.getenv("WXPUSHER_UIDS", "").split(",")
@@ -34,4 +36,5 @@ class Settings:
             serverchan_sendkey=os.getenv("SERVERCHAN_SENDKEY") or None,
             dry_run=dry_run,
             force_recalculate=force_recalculate,
+            skip_if_sent=skip_if_sent,
         )
