@@ -1,0 +1,437 @@
+{
+  "run_date": "2026-07-16",
+  "score": 29.8,
+  "label": "恐惧",
+  "formal": false,
+  "suggested_position": "20%-40%",
+  "outlook": {
+    "up": 23.8,
+    "flat": 32.9,
+    "down": 43.3
+  },
+  "components": [
+    {
+      "key": "trend",
+      "name": "沪深300趋势",
+      "score": 9.8,
+      "weight": 0.1,
+      "status": "OK",
+      "confidence": 1.0,
+      "message": "趋势数据正常。",
+      "details": {
+        "close": 4698.43,
+        "ma20": 4864.79,
+        "ma60": 4854.75,
+        "pct20": -4.92
+      }
+    },
+    {
+      "key": "liquidity",
+      "name": "成交与流动性",
+      "score": 44.9,
+      "weight": 0.07,
+      "status": "WARN",
+      "confidence": 0.8,
+      "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
+      "details": {
+        "recent_amount": 1327375007143.2,
+        "base_amount": 1455158519165.49,
+        "ratio": 0.912
+      }
+    },
+    {
+      "key": "breadth",
+      "name": "市场宽度",
+      "score": 40.0,
+      "weight": 0.13,
+      "status": "WARN",
+      "confidence": 0.7,
+      "message": "市场宽度目前只有东方财富一个来源，可信度降低。",
+      "details": {
+        "total": 5602,
+        "up": 2527,
+        "down": 2903,
+        "flat": 172,
+        "limit_up": 42,
+        "limit_down": 33,
+        "limit_up_ratio": 0.0075,
+        "limit_down_ratio": 0.0059,
+        "first_limit_up": 32,
+        "second_limit_up": 7,
+        "third_or_more_limit_up": 3,
+        "consecutive_limit_up": 10,
+        "highest_consecutive_limit_up": 5,
+        "limit_up_pool_source": "东方财富涨跌停池",
+        "limit_up_pool_error": null,
+        "market_parts": [
+          {
+            "market": "上证市场",
+            "name": "上证指数",
+            "secid": "1.000001",
+            "up": 946,
+            "down": 1339,
+            "flat": 62
+          },
+          {
+            "market": "深证市场",
+            "name": "深证成指",
+            "secid": "0.399001",
+            "up": 1426,
+            "down": 1398,
+            "flat": 104
+          },
+          {
+            "market": "北证市场",
+            "name": "北证50",
+            "secid": "0.899050",
+            "up": 155,
+            "down": 166,
+            "flat": 6
+          }
+        ],
+        "up_ratio": 0.451,
+        "down_ratio": 0.518
+      }
+    },
+    {
+      "key": "profit_effect",
+      "name": "全A赚钱效应",
+      "score": 54.3,
+      "weight": 0.17,
+      "status": "WARN",
+      "confidence": 0.82,
+      "message": "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。",
+      "details": {
+        "source": "新浪行情中心全A分页",
+        "total": 5528,
+        "median_pct_change": -0.181,
+        "average_pct_change": -0.601,
+        "up_3_count": 430,
+        "down_3_count": 1068,
+        "up_3_ratio": 0.0778,
+        "down_3_ratio": 0.1932,
+        "csi300_pct_change": -1.847,
+        "relative_gap_vs_csi300": 1.666
+      }
+    },
+    {
+      "key": "loss_intensity",
+      "name": "深跌亏钱效应",
+      "score": 42.1,
+      "weight": 0.13,
+      "status": "WARN",
+      "confidence": 0.82,
+      "message": "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。",
+      "details": {
+        "source": "新浪行情中心全A分页",
+        "total": 5528,
+        "down_3_count": 1068,
+        "down_5_count": 581,
+        "down_7_count": 266,
+        "down_3_ratio": 0.1932,
+        "down_5_ratio": 0.1051,
+        "down_7_ratio": 0.0481
+      }
+    },
+    {
+      "key": "sector",
+      "name": "板块强弱",
+      "score": 50.0,
+      "weight": 0.15,
+      "status": "MISSING",
+      "confidence": 0.0,
+      "message": "行业板块数据不足。",
+      "details": {}
+    },
+    {
+      "key": "institution",
+      "name": "机构态度",
+      "score": 0.0,
+      "weight": 0.2,
+      "status": "WARN",
+      "confidence": 0.8,
+      "message": "机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。",
+      "details": {
+        "run_date": "2026-07-16",
+        "etf_amount_weighted_pct": -1.949,
+        "etf_count": 7,
+        "etf_total_amount": 17825897459.8,
+        "etf_trade_date": "2026-07-16",
+        "etf_source": "新浪ETF",
+        "if_basis_pct": -1.124,
+        "if_trade_date": "2026-07-16",
+        "margin_trade_date": "2026-07-15",
+        "margin_rzrq_balance": 2887495888072.0,
+        "margin_rzrq_balance_change": 2845212539798.0,
+        "margin_financing_net_buy": -11763608839.0,
+        "margin_stale_or_missing": true
+      }
+    },
+    {
+      "key": "risk",
+      "name": "风险波动",
+      "score": 36.2,
+      "weight": 0.05,
+      "status": "WARN",
+      "confidence": 0.8,
+      "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。",
+      "details": {
+        "vol20": 1.722,
+        "pct5": -1.723
+      }
+    }
+  ],
+  "warnings": [
+    "成交额基于东方财富沪深300历史行情，暂无第二来源校验。",
+    "市场宽度目前只有东方财富一个来源，可信度降低。",
+    "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。",
+    "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。",
+    "行业板块数据不足。",
+    "机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。",
+    "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+  ],
+  "institution_view": [
+    "ETF资金：当日宽基ETF成交额加权跌幅 -1.95%，机构/被动资金偏谨慎。",
+    "股指期货：当日IF主连相对沪深300贴水，期货端偏谨慎。",
+    "主力资金：未获取到足够行业资金流数据，未纳入机构态度评分。",
+    "融资融券：最新数据日期为 2026-07-15，非当日数据，仅作滞后参考，不纳入当日机构评分。"
+  ],
+  "risk_tips": [
+    "今日可用数据权重不足70%，指数为试算值，不建议作为正式仓位信号。"
+  ],
+  "emotion_map": {
+    "strong": [],
+    "weak": [],
+    "concentration": 0.0
+  },
+  "raw_score": 29.8,
+  "factor_contributions": [
+    {
+      "key": "trend",
+      "name": "沪深300趋势",
+      "score": 9.8,
+      "raw_weight": 0.1,
+      "confidence": 1.0,
+      "effective_weight": 0.1443,
+      "contribution": 1.41,
+      "impact_vs_neutral": -5.8,
+      "status": "OK",
+      "message": "趋势数据正常。"
+    },
+    {
+      "key": "liquidity",
+      "name": "成交与流动性",
+      "score": 44.9,
+      "raw_weight": 0.07,
+      "confidence": 0.8,
+      "effective_weight": 0.0808,
+      "contribution": 3.63,
+      "impact_vs_neutral": -0.41,
+      "status": "WARN",
+      "message": "成交额基于东方财富沪深300历史行情，暂无第二来源校验。"
+    },
+    {
+      "key": "breadth",
+      "name": "市场宽度",
+      "score": 40.0,
+      "raw_weight": 0.13,
+      "confidence": 0.7,
+      "effective_weight": 0.1313,
+      "contribution": 5.25,
+      "impact_vs_neutral": -1.31,
+      "status": "WARN",
+      "message": "市场宽度目前只有东方财富一个来源，可信度降低。"
+    },
+    {
+      "key": "profit_effect",
+      "name": "全A赚钱效应",
+      "score": 54.3,
+      "raw_weight": 0.17,
+      "confidence": 0.82,
+      "effective_weight": 0.2012,
+      "contribution": 10.92,
+      "impact_vs_neutral": 0.86,
+      "status": "WARN",
+      "message": "全A涨跌幅中位数和涨跌幅分布用于衡量真实赚钱效应。"
+    },
+    {
+      "key": "loss_intensity",
+      "name": "深跌亏钱效应",
+      "score": 42.1,
+      "raw_weight": 0.13,
+      "confidence": 0.82,
+      "effective_weight": 0.1538,
+      "contribution": 6.48,
+      "impact_vs_neutral": -1.22,
+      "status": "WARN",
+      "message": "跌超5%或7%的股票占比较高，杀跌强度进入恐慌区。"
+    },
+    {
+      "key": "sector",
+      "name": "板块强弱",
+      "score": 50.0,
+      "raw_weight": 0.15,
+      "confidence": 0.0,
+      "effective_weight": 0.0,
+      "contribution": 0.0,
+      "impact_vs_neutral": 0.0,
+      "status": "MISSING",
+      "message": "行业板块数据不足。"
+    },
+    {
+      "key": "institution",
+      "name": "机构态度",
+      "score": 0.0,
+      "raw_weight": 0.2,
+      "confidence": 0.8,
+      "effective_weight": 0.2309,
+      "contribution": 0.0,
+      "impact_vs_neutral": -11.54,
+      "status": "WARN",
+      "message": "机构态度使用当日ETF、股指期货与行业主力资金代理；两融非当日时仅作滞后参考。"
+    },
+    {
+      "key": "risk",
+      "name": "风险波动",
+      "score": 36.2,
+      "raw_weight": 0.05,
+      "confidence": 0.8,
+      "effective_weight": 0.0577,
+      "contribution": 2.09,
+      "impact_vs_neutral": -0.8,
+      "status": "WARN",
+      "message": "风险波动基于沪深300历史行情计算，暂无第二来源校验。"
+    }
+  ],
+  "score_adjustments": [],
+  "index_allocation": [
+    {
+      "rank": 1,
+      "name": "科创50",
+      "code": "000688",
+      "secid": "1.000688",
+      "score": 87.9,
+      "signal": "优先配置",
+      "expected_20d_return": 4.98,
+      "up_probability": 79.4,
+      "momentum_20d": -3.38,
+      "momentum_60d": 27.33,
+      "trend_score": 100.0,
+      "volume_ratio_5_20": 0.924,
+      "volatility_20d": 3.905,
+      "max_drawdown_60d": -16.35,
+      "reason": "20日动量 -3.38%，60日动量 27.33%，5/20日成交额比 0.92，20日波动 3.90%。",
+      "warning": null
+    },
+    {
+      "rank": 2,
+      "name": "上证50",
+      "code": "000016",
+      "secid": "1.000016",
+      "score": 38.9,
+      "signal": "低配回避",
+      "expected_20d_return": -0.54,
+      "up_probability": 45.1,
+      "momentum_20d": -0.84,
+      "momentum_60d": -1.01,
+      "trend_score": 50.0,
+      "volume_ratio_5_20": 0.968,
+      "volatility_20d": 1.702,
+      "max_drawdown_60d": -4.7,
+      "reason": "20日动量 -0.84%，60日动量 -1.01%，5/20日成交额比 0.97，20日波动 1.70%。",
+      "warning": null
+    },
+    {
+      "rank": 3,
+      "name": "沪深300",
+      "code": "000300",
+      "secid": "1.000300",
+      "score": 28.7,
+      "signal": "低配回避",
+      "expected_20d_return": -2.14,
+      "up_probability": 36.1,
+      "momentum_20d": -4.92,
+      "momentum_60d": -1.24,
+      "trend_score": 40.8,
+      "volume_ratio_5_20": 0.888,
+      "volatility_20d": 1.722,
+      "max_drawdown_60d": -7.14,
+      "reason": "20日动量 -4.92%，60日动量 -1.24%，5/20日成交额比 0.89，20日波动 1.72%。",
+      "warning": null
+    },
+    {
+      "rank": 4,
+      "name": "中证500",
+      "code": "000905",
+      "secid": "1.000905",
+      "score": 20.9,
+      "signal": "低配回避",
+      "expected_20d_return": -2.75,
+      "up_probability": 31.7,
+      "momentum_20d": -8.27,
+      "momentum_60d": -4.03,
+      "trend_score": 42.8,
+      "volume_ratio_5_20": 0.882,
+      "volatility_20d": 2.089,
+      "max_drawdown_60d": -11.91,
+      "reason": "20日动量 -8.27%，60日动量 -4.03%，5/20日成交额比 0.88，20日波动 2.09%。",
+      "warning": null
+    },
+    {
+      "rank": 5,
+      "name": "深证成指",
+      "code": "399001",
+      "secid": "0.399001",
+      "score": 15.1,
+      "signal": "低配回避",
+      "expected_20d_return": -3.76,
+      "up_probability": 26.2,
+      "momentum_20d": -9.62,
+      "momentum_60d": -3.19,
+      "trend_score": 32.2,
+      "volume_ratio_5_20": 0.886,
+      "volatility_20d": 2.188,
+      "max_drawdown_60d": -11.51,
+      "reason": "20日动量 -9.62%，60日动量 -3.19%，5/20日成交额比 0.89，20日波动 2.19%。",
+      "warning": null
+    },
+    {
+      "rank": 6,
+      "name": "创业板指",
+      "code": "399006",
+      "secid": "0.399006",
+      "score": 14.8,
+      "signal": "低配回避",
+      "expected_20d_return": -3.91,
+      "up_probability": 25.6,
+      "momentum_20d": -13.17,
+      "momentum_60d": 0.4,
+      "trend_score": 42.6,
+      "volume_ratio_5_20": 0.868,
+      "volatility_20d": 2.904,
+      "max_drawdown_60d": -15.54,
+      "reason": "20日动量 -13.17%，60日动量 0.40%，5/20日成交额比 0.87，20日波动 2.90%。",
+      "warning": null
+    },
+    {
+      "rank": 7,
+      "name": "中证1000",
+      "code": "000852",
+      "secid": "1.000852",
+      "score": 0.0,
+      "signal": "低配回避",
+      "expected_20d_return": -5.5,
+      "up_probability": 20,
+      "momentum_20d": -12.99,
+      "momentum_60d": -8.69,
+      "trend_score": 16.1,
+      "volume_ratio_5_20": 0.882,
+      "volatility_20d": 1.939,
+      "max_drawdown_60d": -14.78,
+      "reason": "20日动量 -12.99%，60日动量 -8.69%，5/20日成交额比 0.88，20日波动 1.94%。",
+      "warning": null
+    }
+  ],
+  "report_schema_version": 21,
+  "model_version": "2.0"
+}
